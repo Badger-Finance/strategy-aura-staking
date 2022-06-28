@@ -1,11 +1,14 @@
-import time
-
+import pytest
 from brownie import (
     StrategyAuraStaking,
     TheVault,
     interface,
     accounts,
 )
+from helpers.constants import MaxUint256
+from dotmap import DotMap
+from rich.console import Console
+
 from _setup.config import (
     WANT,
     PID,
@@ -15,13 +18,9 @@ from _setup.config import (
     WITHDRAWAL_FEE,
     MANAGEMENT_FEE,
 )
-from helpers.constants import MaxUint256
-from rich.console import Console
+
 
 console = Console()
-
-from dotmap import DotMap
-import pytest
 
 
 ## Accounts ##

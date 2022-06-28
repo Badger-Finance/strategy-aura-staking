@@ -8,10 +8,9 @@ def test_are_you_trying(deployer, vault, strategy, want, governance):
     """
     # Setup
     startingBalance = want.balanceOf(deployer)
-
     depositAmount = startingBalance // 2
-    assert startingBalance >= depositAmount
-    assert startingBalance >= 0
+
+    assert depositAmount >= 0
     # End Setup
 
     # Deposit
@@ -34,18 +33,14 @@ def test_are_you_trying(deployer, vault, strategy, want, governance):
     assert want.balanceOf(strategy) < available
 
     # Use this if it should invest all
-    # assert want.balanceOf(strategy) == 0
-
-    # Change to this if the strat is supposed to hodl and do nothing
-    # assert strategy.balanceOf(want) = depositAmount
+    assert want.balanceOf(strategy) == 0
 
     ## TEST 2: Is the Harvest profitable?
     harvest = strategy.harvest({"from": governance})
     event = harvest.events["Harvested"]
-    # If it doesn't print, we don't want it
-    assert event["amount"] > 0
+    assert event["amount"] == 0
 
     ## TEST 3: Does the strategy emit anything?
     event = harvest.events["TreeDistribution"]
-    assert event["token"] == "TOKEN"  ## Add token you emit
-    assert event["amount"] > 0  ## We want it to emit something
+    assert event["token"] == strategy.BAURABAL()
+    assert event["amount"] > 0

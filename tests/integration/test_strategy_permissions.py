@@ -1,7 +1,12 @@
 import brownie
-from brownie import *
-from helpers.constants import MaxUint256, AddressZero
+from brownie import interface, chain, accounts, history
+from helpers.constants import MaxUint256
+import time
 from helpers.time import days
+from rich.console import Console
+from _setup.config import PID
+
+console = Console()
 
 
 def state_setup(deployer, vault, strategy, want, keeper):
@@ -11,7 +16,7 @@ def state_setup(deployer, vault, strategy, want, keeper):
 
     startingBalance = want.balanceOf(deployer)
     depositAmount = int(startingBalance * 0.8)
-    assert startingBalance >= depositAmount
+    assert depositAmount != 0
 
     want.approve(vault, MaxUint256, {"from": deployer})
     vault.deposit(depositAmount, {"from": deployer})
@@ -29,8 +34,17 @@ def state_setup(deployer, vault, strategy, want, keeper):
 
     strategy.harvest({"from": keeper})
 
-    chain.sleep(days(1))
+    chain.sleep(days(3))
     chain.mine()
+
+    ## Reset rewards if they are set to expire within the next 4 days or are expired already
+    rewardsPool = interface.IBaseRewardPool(strategy.baseRewardPool())
+    if rewardsPool.periodFinish() - int(time.time()) < days(4):
+        booster = interface.IBooster(strategy.booster())
+        booster.earmarkRewards(PID, {"from": deployer})
+        console.print(
+            "[green]baseRewardPool expired or expiring soon - it was reset![/green]"
+        )
 
     accounts.at(deployer, force=True)
     accounts.at(strategy.strategist(), force=True)
@@ -102,6 +116,14 @@ def test_strategy_action_permissions(deployer, vault, strategy, want, keeper):
         else:
             with brownie.reverts("onlyGovernanceOrStrategist"):
                 vault.sweepExtraToken(vault, {"from": actor})
+
+    # setPid
+    for actor in actorsToCheck:
+        if actor == strategy.governance():
+            strategy.setPid(PID, {"from": actor})
+        else:
+            with brownie.reverts("onlyGovernance"):
+                strategy.setPid(PID, {"from": actor})
 
 
 def test_strategy_pausing_permissions(deployer, vault, strategy, want, keeper):
