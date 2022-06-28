@@ -4,5 +4,5 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 interface IBadgerRegistry {
-  function get(string calldata name) external view returns (address);
+    function get(string calldata name) external view returns (address);
 }
