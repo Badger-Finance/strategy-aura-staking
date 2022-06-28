@@ -154,11 +154,11 @@ contract StrategyAuraStaking is BaseStrategy {
         stakingRewards.getReward();
 
         // Rewards are handled like this:
-        // BAL       --> BAL/ETH BPT --> AURABAL (autocompounded)
+        // BAL       --> BAL/ETH BPT --> AURABAL --> B-AURABAL (emitted)
         // AURA      --> GRAVIAURA (emitted)
         // BB_A_USD  --> Left in strategy to be sweeped later
         harvested = new TokenAmount[](2);
-        harvested[0].token = address(AURABAL);
+        harvested[0].token = address(BAURABAL);
         harvested[1].token = address(GRAVIAURA);
 
         // BAL --> BAL/ETH BPT --> AURABAL
@@ -220,11 +220,13 @@ contract StrategyAuraStaking is BaseStrategy {
                 type(uint256).max
             );
 
-            harvested[0].amount = auraBalEarned;
-        }
+            // AURABAL --> B-AURABAL
+            BAURABAL.deposit(auraBalance);
+            uint256 bAuraBalBalance = BAURABAL.balanceOf(address(this));
 
-        // Report harvest
-        _reportToVault(auraBalEarned);
+            harvested[0].amount = bAuraBalBalance;
+            _processExtraToken(address(BAURABAL), bAuraBalBalance);
+        }
 
         // AURA --> graviAURA
         uint256 auraBalance = AURA.balanceOf(address(this));
@@ -235,6 +237,9 @@ contract StrategyAuraStaking is BaseStrategy {
             harvested[1].amount = graviAuraBalance;
             _processExtraToken(address(GRAVIAURA), graviAuraBalance);
         }
+
+        // Report harvest
+        _reportToVault(0);
     }
 
     // Example tend is a no-op which returns the values, could also just revert
@@ -260,7 +265,7 @@ contract StrategyAuraStaking is BaseStrategy {
         rewards = new TokenAmount[](numExtraRewards + 1);
 
         rewards[0] = TokenAmount(
-            address(BAL),
+            stakingRewards.rewardToken(),
             stakingRewards.earned(address(this))
         );
 
