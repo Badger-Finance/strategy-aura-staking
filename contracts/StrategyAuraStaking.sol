@@ -23,7 +23,7 @@ contract StrategyAuraStaking is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 public pid;
-    IBaseRewardPool baseRewardPool;
+    IBaseRewardPool public baseRewardPool;
 
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
@@ -74,6 +74,9 @@ contract StrategyAuraStaking is BaseStrategy {
 
         claimRewardsOnWithdrawAll = true;
         balEthBptToAuraBalMinOutBps = 9500; // max 5% slippage
+
+        // Approvals
+        IERC20Upgradeable(lptoken).safeApprove(address(BOOSTER), type(uint256).max);
 
         BAL.safeApprove(address(BALANCER_VAULT), type(uint256).max);
         BALETH_BPT.safeApprove(address(BALANCER_VAULT), type(uint256).max);
