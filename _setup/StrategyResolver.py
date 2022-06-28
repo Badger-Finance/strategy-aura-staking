@@ -1,5 +1,8 @@
+from brownie import interface
+
 from helpers.StrategyCoreResolver import StrategyCoreResolver
 from rich.console import Console
+from _setup.config import WANT
 
 console = Console()
 
@@ -11,50 +14,61 @@ class StrategyResolver(StrategyCoreResolver):
         (Strategy Must Implement)
         """
         strategy = self.manager.strategy
-        return {}
+        sett = self.manager.sett
+        return {
+            "auraBalRewards": strategy.AURABAL_REWARDS(),
+            "graviAura": strategy.GRAVIAURA(),
+            "badgerTree": sett.badgerTree(),
+        }
 
-    def hook_after_confirm_withdraw(self, before, after, params):
-        """
-        Specifies extra check for ordinary operation on withdrawal
-        Use this to verify that balances in the get_strategy_destinations are properly set
-        """
-        assert True
+    def add_balances_snap(self, calls, entities):
+        super().add_balances_snap(calls, entities)
+        strategy = self.manager.strategy
 
-    def hook_after_confirm_deposit(self, before, after, params):
-        """
-        Specifies extra check for ordinary operation on deposit
-        Use this to verify that balances in the get_strategy_destinations are properly set
-        """
-        assert True  ## Done in earn
+        aura = interface.IERC20(strategy.AURA())
+        auraBal = interface.IERC20(strategy.AURABAL())  # want
 
-    def hook_after_earn(self, before, after, params):
-        """
-        Specifies extra check for ordinary operation on earn
-        Use this to verify that balances in the get_strategy_destinations are properly set
-        """
-        assert True
+        graviAura = interface.IERC20(strategy.GRAVIAURA())
 
-    # def confirm_harvest(self, before, after, tx):
-    #     """
-    #     Verfies that the Harvest produced yield and fees
-    #     NOTE: This overrides default check, use only if you know what you're doing
-    #     """
-    #     console.print("=== Compare Harvest ===")
-    #     self.manager.printCompare(before, after)
-    #     self.confirm_harvest_state(before, after, tx)
+        calls = self.add_entity_balances_for_tokens(calls, "aura", aura, entities)
+        calls = self.add_entity_balances_for_tokens(calls, "auraBal", auraBal, entities)
+        calls = self.add_entity_balances_for_tokens(
+            calls, "graviAura", graviAura, entities
+        )
 
-    #     valueGained = after.get("sett.getPricePerFullShare") > before.get(
-    #         "sett.getPricePerFullShare"
-    #     )
+        return calls
 
-    #     assert True
+    def confirm_harvest(self, before, after, tx):
+        console.print("=== Compare Harvest ===")
+        self.manager.printCompare(before, after)
+        self.confirm_harvest_state(before, after, tx)
 
-    def confirm_tend(self, before, after, tx):
-        """
-        Tend Should;
-        - Increase the number of staked tended tokens in the strategy-specific mechanism
-        - Reduce the number of tended tokens in the Strategy to zero
+        super().confirm_harvest(before, after, tx)
 
-        (Strategy Must Implement)
-        """
-        assert True
+        assert len(tx.events["Harvested"]) == 1
+        event = tx.events["Harvested"][0]
+
+        assert event["token"] == WANT
+        assert event["amount"] == after.get("sett.balance") - before.get("sett.balance")
+
+        assert len(tx.events["TreeDistribution"]) == 1
+        event = tx.events["TreeDistribution"][0]
+
+        assert after.balances("graviAura", "badgerTree") > before.balances(
+            "graviAura", "badgerTree"
+        )
+
+        if before.get("sett.performanceFeeGovernance") > 0:
+            assert after.balances("graviAura", "treasury") > before.balances(
+                "graviAura", "treasury"
+            )
+
+        if before.get("sett.performanceFeeStrategist") > 0:
+            assert after.balances("graviAura", "strategist") > before.balances(
+                "graviAura", "strategist"
+            )
+
+        assert event["token"] == self.manager.strategy.GRAVIAURA()
+        assert event["amount"] == after.balances(
+            "graviAura", "badgerTree"
+        ) - before.balances("graviAura", "badgerTree")
