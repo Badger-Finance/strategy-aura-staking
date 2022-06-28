@@ -1,27 +1,11 @@
 {
-    "name": "badger-finance",
-    "version": "0.0.0",
-    "devDependencies": {
-        "@commitlint/cli": "^12.1.4",
-        "@commitlint/config-conventional": "^12.1.4",
-        "husky": "^7.0.0",
-        "prettier": "^2.3.2",
-        "prettier-plugin-solidity": "^1.0.0-beta.13",
-        "pretty-quick": "^3.1.1",
-        "solhint": "^3.3.6",
-        "solhint-plugin-prettier": "^0.0.5"
-    },
-    "scripts": {
-        "format": "prettier --write 'contracts/**/*.sol' --verbose",
-        "format:check": "prettier --check '**/*.*(sol|json)'",
-        "format:fix": "pretty-quick --pattern '**/*.*(sol|json)' --staged --verbose",
-        "hint": "solhint \"contracts/**/*.sol\"",
-        "prepare": "husky install"
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "yarn lint:fix",
-            "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-        }
-    }
+  "scripts": {
+    "prettier": "prettier --write '(contracts|interfaces)/**/*.sol'",
+    "prettier:list": "prettier --list-different '(contracts|interfaces)/**/*.sol'",
+    "prettier:check": "prettier --check '(contracts|interfaces)/**/*.sol'"
+  },
+  "devDependencies": {
+    "prettier": "^2.7.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19"
+  }
 }
