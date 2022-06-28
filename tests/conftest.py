@@ -1,13 +1,14 @@
 import time
 
 from brownie import (
-    MyStrategy,
+    StrategyAuraStaking,
     TheVault,
     interface,
     accounts,
 )
 from _setup.config import (
     WANT,
+    PID,
     WHALE_ADDRESS,
     PERFORMANCE_FEE_GOVERNANCE,
     PERFORMANCE_FEE_STRATEGIST,
@@ -123,8 +124,8 @@ def deployed(
     vault.setStrategist(deployer, {"from": governance})
     # NOTE: TheVault starts unpaused
 
-    strategy = MyStrategy.deploy({"from": deployer})
-    strategy.initialize(vault, [want])
+    strategy = StrategyAuraStaking.deploy({"from": deployer})
+    strategy.initialize(vault, PID)
     # NOTE: Strategy starts unpaused
 
     vault.setStrategy(strategy, {"from": governance})
