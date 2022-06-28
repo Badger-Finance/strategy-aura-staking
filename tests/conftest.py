@@ -7,9 +7,8 @@ from brownie import (
     accounts,
 )
 from _setup.config import (
-    WANT, 
+    WANT,
     WHALE_ADDRESS,
-
     PERFORMANCE_FEE_GOVERNANCE,
     PERFORMANCE_FEE_STRATEGIST,
     WITHDRAWAL_FEE,
@@ -29,6 +28,7 @@ import pytest
 def deployer():
     return accounts[0]
 
+
 @pytest.fixture
 def user():
     return accounts[9]
@@ -37,17 +37,12 @@ def user():
 ## Fund the account
 @pytest.fixture
 def want(deployer):
-    """
-        TODO: Customize this so you have the token you need for the strat
-    """
     TOKEN_ADDRESS = WANT
     token = interface.IERC20Detailed(TOKEN_ADDRESS)
-    WHALE = accounts.at(WHALE_ADDRESS, force=True) ## Address with tons of token
+    WHALE = accounts.at(WHALE_ADDRESS, force=True)  ## Address with tons of token
 
     token.transfer(deployer, token.balanceOf(WHALE), {"from": WHALE})
     return token
-
-
 
 
 @pytest.fixture
@@ -69,6 +64,7 @@ def guardian():
 def governance():
     return accounts[4]
 
+
 @pytest.fixture
 def treasury():
     return accounts[5]
@@ -83,19 +79,28 @@ def proxyAdmin():
 def randomUser():
     return accounts[7]
 
+
 @pytest.fixture
 def badgerTree():
     return accounts[8]
 
 
-
 @pytest.fixture
-def deployed(want, deployer, strategist, keeper, guardian, governance, proxyAdmin, randomUser, badgerTree):
+def deployed(
+    want,
+    deployer,
+    strategist,
+    keeper,
+    guardian,
+    governance,
+    proxyAdmin,
+    randomUser,
+    badgerTree,
+):
     """
     Deploys, vault and test strategy, mock token and wires them up.
     """
     want = want
-
 
     vault = TheVault.deploy({"from": deployer})
     vault.initialize(
@@ -136,7 +141,7 @@ def deployed(want, deployer, strategist, keeper, guardian, governance, proxyAdmi
         performanceFeeStrategist=PERFORMANCE_FEE_STRATEGIST,
         withdrawalFee=WITHDRAWAL_FEE,
         managementFee=MANAGEMENT_FEE,
-        badgerTree=badgerTree
+        badgerTree=badgerTree,
     )
 
 
@@ -151,10 +156,10 @@ def strategy(deployed):
     return deployed.strategy
 
 
-
 @pytest.fixture
 def tokens(deployed):
     return [deployed.want]
+
 
 ### Fees ###
 @pytest.fixture

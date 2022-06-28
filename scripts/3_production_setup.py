@@ -39,7 +39,7 @@ def main():
 
     assert STRAT != "123"
     assert VAULT != "123"
-    
+
     strategy = MyStrategy.at(STRAT)
     vault = TheVault.at(VAULT)
 

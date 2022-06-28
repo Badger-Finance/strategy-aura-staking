@@ -26,7 +26,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
     IVault public constant GRAVIAURA =
         IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
-    IVault public constant B_AURABAL =
+    IVault public constant BAURABAL =
         IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
 
     IBalancerVault public constant BALANCER_VAULT =

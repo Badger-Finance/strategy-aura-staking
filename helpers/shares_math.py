@@ -1,10 +1,12 @@
 from dotmap import DotMap
+
 """
   Set of functions to calculate shares burned, fees, and want withdrawn or deposited
 """
 
 MAX_BPS = 10_000
 SECS_PER_YEAR = 31_556_952
+
 
 def from_want_to_shares(
     want_deposited, total_supply_before_deposit, balance_before_deposit
@@ -20,9 +22,7 @@ def from_want_to_shares(
     return expected_shares
 
 
-def from_shares_to_want(
-    shares_to_burn, ppfs_before_withdraw, vault_decimals
-):
+def from_shares_to_want(shares_to_burn, ppfs_before_withdraw, vault_decimals):
     """
     Used to estimate how much want you'll get for a withdrawal, by burning the shares (including fees)
     """
@@ -77,12 +77,13 @@ def get_performance_fees_want(total_harvest_gain, performance_fee):
 
     return total_harvest_gain * performance_fee // MAX_BPS
 
+
 def get_management_fees_want(total_assets, time_passed, management_fee):
     """
     Given the total assets, the time expired and the management fee, returns the management fee in want
     """
 
-    return management_fee  * total_assets * time_passed // SECS_PER_YEAR // MAX_BPS
+    return management_fee * total_assets * time_passed // SECS_PER_YEAR // MAX_BPS
 
 
 def get_performance_fees_shares(
@@ -125,11 +126,11 @@ def get_report_fees(
     balance_before_deposit,
 ):
     """
-        Given the harvest info, and vault settings
-        Returns the amount of shares issues for:
-        Perf fee to treasury
-        Management fee to treasury
-        Perf fee to Strategist
+    Given the harvest info, and vault settings
+    Returns the amount of shares issues for:
+    Perf fee to treasury
+    Management fee to treasury
+    Perf fee to Strategist
     """
 
     ## Change so that
@@ -139,22 +140,35 @@ def get_report_fees(
     balance = balance_before_deposit + total_harvest_gain
     new_total_supply = total_supply_before_deposit
 
-    fee_in_want_treasury = get_performance_fees_want(total_harvest_gain, performance_fee_treasury)
-    management_fee_in_want = get_management_fees_want(balance_before_deposit, time_since_last_harvest, management_fee)
-    fee_in_want_strategist = get_performance_fees_want(total_harvest_gain, performance_fee_strategist)
+    fee_in_want_treasury = get_performance_fees_want(
+        total_harvest_gain, performance_fee_treasury
+    )
+    management_fee_in_want = get_management_fees_want(
+        balance_before_deposit, time_since_last_harvest, management_fee
+    )
+    fee_in_want_strategist = get_performance_fees_want(
+        total_harvest_gain, performance_fee_strategist
+    )
 
     ## Get the shares
-    pool = balance - fee_in_want_treasury - management_fee_in_want - fee_in_want_strategist
-    shares_perf_treasury = from_want_to_shares(fee_in_want_treasury, new_total_supply, pool)
+    pool = (
+        balance - fee_in_want_treasury - management_fee_in_want - fee_in_want_strategist
+    )
+    shares_perf_treasury = from_want_to_shares(
+        fee_in_want_treasury, new_total_supply, pool
+    )
     new_total_supply += shares_perf_treasury
     pool = pool + fee_in_want_treasury
 
-    shares_management = from_want_to_shares(management_fee_in_want, new_total_supply, pool)
+    shares_management = from_want_to_shares(
+        management_fee_in_want, new_total_supply, pool
+    )
     new_total_supply += shares_management
     pool = pool + management_fee_in_want
 
-    shares_perf_strategist = from_want_to_shares(fee_in_want_strategist, new_total_supply, pool)
-
+    shares_perf_strategist = from_want_to_shares(
+        fee_in_want_strategist, new_total_supply, pool
+    )
 
     return DotMap(
         shares_perf_treasury=shares_perf_treasury,

@@ -10,9 +10,8 @@ from brownie import (
 )
 
 from _setup.config import (
-    WANT, 
+    WANT,
     REGISTRY,
-
     PERFORMANCE_FEE_GOVERNANCE,
     PERFORMANCE_FEE_STRATEGIST,
     WITHDRAWAL_FEE,
@@ -50,8 +49,8 @@ def main():
     keeper = registry.get("keeper")
     proxyAdmin = registry.get("proxyAdminTimelock")
 
-    name = "FTM STRAT" ## In vaults 1.5 it's the full name
-    symbol = "bFRM-STrat" ## e.g The full symbol (remember to add symbol from want)
+    name = "FTM STRAT"  ## In vaults 1.5 it's the full name
+    symbol = "bFRM-STrat"  ## e.g The full symbol (remember to add symbol from want)
 
     assert strategist != AddressZero
     assert guardian != AddressZero
@@ -70,22 +69,19 @@ def main():
         proxyAdmin,
         name,
         symbol,
-        dev
+        dev,
     )
 
     # Deploy Strategy
-    strategy = deploy_strategy(
-        vault,
-        proxyAdmin,
-        dev
-    )
+    strategy = deploy_strategy(vault, proxyAdmin, dev)
 
     dev_setup = vault.setStrategy(strategy, {"from": dev})
     console.print("[green]Strategy was set was deployed at: [/green]", dev_setup)
-    
 
 
-def deploy_vault(governance, keeper, guardian, strategist, badgerTree, proxyAdmin, name, symbol, dev):
+def deploy_vault(
+    governance, keeper, guardian, strategist, badgerTree, proxyAdmin, name, symbol, dev
+):
     args = [
         WANT,
         governance,
@@ -114,7 +110,7 @@ def deploy_vault(governance, keeper, guardian, strategist, badgerTree, proxyAdmi
         vault_logic,
         proxyAdmin,
         vault_logic.initialize.encode_input(*args),
-        {"from": dev}
+        {"from": dev},
     )
     time.sleep(sleep_between_tx)
 
@@ -127,14 +123,9 @@ def deploy_vault(governance, keeper, guardian, strategist, badgerTree, proxyAdmi
     return vault_proxy
 
 
-def deploy_strategy(
-     vault, proxyAdmin, dev
-):
+def deploy_strategy(vault, proxyAdmin, dev):
 
-    args = [
-        vault,
-        [WANT]
-    ]
+    args = [vault, [WANT]]
 
     print("Strategy Arguments: ", args)
 
@@ -145,7 +136,7 @@ def deploy_strategy(
         strat_logic,
         proxyAdmin,
         strat_logic.initialize.encode_input(*args),
-        {"from": dev}
+        {"from": dev},
     )
     time.sleep(sleep_between_tx)
 
@@ -156,7 +147,6 @@ def deploy_strategy(
     console.print("[green]Strategy was deployed at: [/green]", strat_proxy.address)
 
     return strat_proxy
-
 
 
 def connect_account():

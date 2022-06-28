@@ -16,7 +16,8 @@ class StrategyResolver(StrategyCoreResolver):
         strategy = self.manager.strategy
         sett = self.manager.sett
         return {
-            "auraBalRewards": strategy.AURABAL_REWARDS(),
+            "stakingRewards": strategy.stakingRewards(),
+            "bAuraBal": strategy.BAURABAL(),
             "graviAura": strategy.GRAVIAURA(),
             "badgerTree": sett.badgerTree(),
         }
@@ -28,10 +29,14 @@ class StrategyResolver(StrategyCoreResolver):
         aura = interface.IERC20(strategy.AURA())
         auraBal = interface.IERC20(strategy.AURABAL())  # want
 
+        bAuraBal = interface.IERC20(strategy.BAURABAL())
         graviAura = interface.IERC20(strategy.GRAVIAURA())
 
         calls = self.add_entity_balances_for_tokens(calls, "aura", aura, entities)
         calls = self.add_entity_balances_for_tokens(calls, "auraBal", auraBal, entities)
+        calls = self.add_entity_balances_for_tokens(
+            calls, "bAuraBal", bAuraBal, entities
+        )
         calls = self.add_entity_balances_for_tokens(
             calls, "graviAura", graviAura, entities
         )
@@ -49,26 +54,33 @@ class StrategyResolver(StrategyCoreResolver):
         event = tx.events["Harvested"][0]
 
         assert event["token"] == WANT
-        assert event["amount"] == after.get("sett.balance") - before.get("sett.balance")
+        assert event["amount"] == 0
 
-        assert len(tx.events["TreeDistribution"]) == 1
-        event = tx.events["TreeDistribution"][0]
+        assert len(tx.events["TreeDistribution"]) == 2
 
-        assert after.balances("graviAura", "badgerTree") > before.balances(
-            "graviAura", "badgerTree"
-        )
+        emitted = {
+            "bAuraBal": self.manager.strategy.BAURABAL(),
+            "graviAura": self.manager.strategy.GRAVIAURA(),
+        }
 
-        if before.get("sett.performanceFeeGovernance") > 0:
-            assert after.balances("graviAura", "treasury") > before.balances(
-                "graviAura", "treasury"
+        for i, key in enumerate(emitted):
+            event = tx.events["TreeDistribution"][i]
+
+            assert after.balances(key, "badgerTree") > before.balances(
+                key, "badgerTree"
             )
 
-        if before.get("sett.performanceFeeStrategist") > 0:
-            assert after.balances("graviAura", "strategist") > before.balances(
-                "graviAura", "strategist"
-            )
+            if before.get("sett.performanceFeeGovernance") > 0:
+                assert after.balances(key, "treasury") > before.balances(
+                    key, "treasury"
+                )
 
-        assert event["token"] == self.manager.strategy.GRAVIAURA()
-        assert event["amount"] == after.balances(
-            "graviAura", "badgerTree"
-        ) - before.balances("graviAura", "badgerTree")
+            if before.get("sett.performanceFeeStrategist") > 0:
+                assert after.balances(key, "strategist") > before.balances(
+                    key, "strategist"
+                )
+
+            assert event["token"] == emitted[key]
+            assert event["amount"] == after.balances(
+                key, "badgerTree"
+            ) - before.balances(key, "badgerTree")

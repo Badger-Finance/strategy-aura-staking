@@ -205,7 +205,6 @@ def test_sett_pausing_permissions(deployer, vault, strategy, want, keeper):
     vault.withdrawAll({"from": deployer})
 
 
-
 def test_sett_earn_permissions(deployer, vault, strategy, want, keeper):
     # Setup
     state_setup(deployer, vault, strategy, want, keeper)
@@ -246,11 +245,10 @@ def test_pause_checks(vault, strategy, governance):
     assert history[-1].events["Unpaused"]["account"] == governance
 
     with brownie.reverts():
-        vault.unpause({"from": governance}) ## Can't unpause if unpaused
-    
+        vault.unpause({"from": governance})  ## Can't unpause if unpaused
+
     strategy.unpause({"from": governance})
     assert history[-1].events["Unpaused"]["account"] == governance
 
     with brownie.reverts():
-        strategy.unpause({"from": governance}) ## Can't unpause if unpaused
-
+        strategy.unpause({"from": governance})  ## Can't unpause if unpaused
