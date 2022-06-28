@@ -76,13 +76,27 @@ contract StrategyAuraStaking is BaseStrategy {
         balEthBptToAuraBalMinOutBps = 9500; // max 5% slippage
 
         // Approvals
-        IERC20Upgradeable(lptoken).safeApprove(address(BOOSTER), type(uint256).max);
+        IERC20Upgradeable(lptoken).safeApprove(
+            address(BOOSTER),
+            type(uint256).max
+        );
 
         BAL.safeApprove(address(BALANCER_VAULT), type(uint256).max);
         BALETH_BPT.safeApprove(address(BALANCER_VAULT), type(uint256).max);
 
         AURABAL.safeApprove(address(BAURABAL), type(uint256).max);
         AURA.approve(address(GRAVIAURA), type(uint256).max);
+    }
+
+    function setPid(uint256 _pid) external {
+        _onlyGovernance();
+        require(balanceOfPool() == 0, "cannot change pid if pending deposits");
+
+        (address lptoken, , , address crvRewards, , ) = BOOSTER.poolInfo(_pid);
+        require(lptoken == want, "token mismatch");
+
+        pid = _pid;
+        baseRewardPool = IBaseRewardPool(crvRewards);
     }
 
     function setClaimRewardsOnWithdrawAll(bool _claimRewardsOnWithdrawAll)
