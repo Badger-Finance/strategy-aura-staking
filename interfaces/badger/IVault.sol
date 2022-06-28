@@ -33,4 +33,8 @@ interface IVault {
     function deposit(uint256 _amount) external;
 
     function balanceOf(address) external view returns (uint256);
+
+    function setStrategy(address _strategy) external;
+
+    function setGovernance(address _governance) external;
 }

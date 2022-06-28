@@ -12,6 +12,8 @@ import {BaseStrategy} from "@badger-finance/BaseStrategy.sol";
 import {IVault} from "../interfaces/badger/IVault.sol";
 import {IAsset} from "../interfaces/balancer/IAsset.sol";
 import {IBalancerVault, JoinKind} from "../interfaces/balancer/IBalancerVault.sol";
+import {IBooster} from "../interfaces/aura/IBooster.sol";
+import {IAuraToken} from "interfaces/aura/IAuraToken.sol";
 import {ICrvDepositorWrapper} from "interfaces/aura/ICrvDepositorWrapper.sol";
 import {IBaseRewardPool} from "interfaces/aura/IBaseRewardPool.sol";
 import {IVirtualBalanceRewardPool} from "interfaces/aura/IVirtualBalanceRewardPool.sol";
@@ -20,9 +22,14 @@ contract StrategyAuraStaking is BaseStrategy {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    IBaseRewardPool stakingRewards;
+    uint256 public pid;
+    IBaseRewardPool baseRewardPool;
+
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
+
+    IBooster public constant BOOSTER =
+        IBooster(0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10);
 
     IVault public constant GRAVIAURA =
         IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
@@ -32,14 +39,15 @@ contract StrategyAuraStaking is BaseStrategy {
     IBalancerVault public constant BALANCER_VAULT =
         IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
+    IAuraToken public constant AURA =
+        IAuraToken(0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF);
+
     IERC20Upgradeable public constant AURABAL =
         IERC20Upgradeable(0x616e8BfA43F920657B3497DBf40D6b1A02D4608d);
     IERC20Upgradeable public constant WETH =
         IERC20Upgradeable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20Upgradeable public constant BAL =
         IERC20Upgradeable(0xba100000625a3754423978a60c9317c58a424e3D);
-    IERC20Upgradeable public constant AURA =
-        IERC20Upgradeable(0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF);
     IERC20Upgradeable public constant BALETH_BPT =
         IERC20Upgradeable(0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56);
     IERC20Upgradeable public constant BB_A_USD =
@@ -53,20 +61,25 @@ contract StrategyAuraStaking is BaseStrategy {
     /// @dev Initialize the Strategy with security settings as well as tokens
     /// @notice Proxies will set any non constant variable you declare as default value
     /// @dev add any extra changeable variable at end of initializer as shown
-    function initialize(address _vault, address _stakingRewards) public initializer {
+    function initialize(address _vault, uint256 _pid) public initializer {
         __BaseStrategy_init(_vault);
 
-        want = IVault(_vault).token();
-        stakingRewards = IBaseRewardPool(_stakingRewards);
+        (address lptoken, , , address crvRewards, , ) = BOOSTER.poolInfo(_pid);
+        require(lptoken == IVault(_vault).token(), "token mismatch");
+
+        want = lptoken;
+        pid = _pid;
+
+        baseRewardPool = IBaseRewardPool(crvRewards);
 
         claimRewardsOnWithdrawAll = true;
-
-        AURABAL.safeApprove(_stakingRewards, type(uint256).max);
+        balEthBptToAuraBalMinOutBps = 9500; // max 5% slippage
 
         BAL.safeApprove(address(BALANCER_VAULT), type(uint256).max);
         BALETH_BPT.safeApprove(address(BALANCER_VAULT), type(uint256).max);
 
-        AURA.safeApprove(address(GRAVIAURA), type(uint256).max);
+        AURABAL.safeApprove(address(BAURABAL), type(uint256).max);
+        AURA.approve(address(GRAVIAURA), type(uint256).max);
     }
 
     function setClaimRewardsOnWithdrawAll(bool _claimRewardsOnWithdrawAll)
@@ -107,15 +120,14 @@ contract StrategyAuraStaking is BaseStrategy {
 
     /// @dev Deposit `_amount` of want, investing it to earn yield
     function _deposit(uint256 _amount) internal override {
-        // Add code here to invest `_amount` of want to earn yield
-        stakingRewards.stake(_amount);
+        BOOSTER.deposit(pid, _amount, true);
     }
 
     /// @dev Withdraw all funds, this is used for migrations, most of the time for emergency reasons
     function _withdrawAll() internal override {
         uint256 poolBalance = balanceOfPool();
         if (poolBalance > 0) {
-            stakingRewards.withdrawAll(claimRewardsOnWithdrawAll);
+            baseRewardPool.withdrawAllAndUnwrap(claimRewardsOnWithdrawAll);
         }
     }
 
@@ -127,14 +139,9 @@ contract StrategyAuraStaking is BaseStrategy {
         returns (uint256)
     {
         uint256 wantBalance = balanceOfWant();
-        if (wantBalance < _amount) {
+        if (_amount > wantBalance) {
             uint256 toWithdraw = _amount.sub(wantBalance);
-            uint256 poolBalance = balanceOfPool();
-            if (poolBalance < toWithdraw) {
-                stakingRewards.withdraw(poolBalance, false);
-            } else {
-                stakingRewards.withdraw(toWithdraw, false);
-            }
+            baseRewardPool.withdrawAndUnwrap(toWithdraw, false);
         }
         return MathUpgradeable.min(_amount, balanceOfWant());
     }
@@ -151,7 +158,7 @@ contract StrategyAuraStaking is BaseStrategy {
     {
         uint256 auraBalBefore = balanceOfWant();
 
-        stakingRewards.getReward();
+        baseRewardPool.getReward();
 
         // Rewards are handled like this:
         // BAL       --> BAL/ETH BPT --> AURABAL --> B-AURABAL (emitted)
@@ -221,7 +228,7 @@ contract StrategyAuraStaking is BaseStrategy {
             );
 
             // AURABAL --> B-AURABAL
-            BAURABAL.deposit(auraBalance);
+            BAURABAL.deposit(auraBalEarned);
             uint256 bAuraBalBalance = BAURABAL.balanceOf(address(this));
 
             harvested[0].amount = bAuraBalBalance;
@@ -249,8 +256,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
     /// @dev Return the balance (in want) that the strategy has invested somewhere
     function balanceOfPool() public view override returns (uint256) {
-        // Change this to return the amount of want invested in another protocol
-        return stakingRewards.balanceOf(address(this));
+        return baseRewardPool.balanceOf(address(this));
     }
 
     /// @dev Return the balance of rewards that the strategy has accrued
@@ -261,22 +267,40 @@ contract StrategyAuraStaking is BaseStrategy {
         override
         returns (TokenAmount[] memory rewards)
     {
-        uint256 numExtraRewards = stakingRewards.extraRewardsLength();
-        rewards = new TokenAmount[](numExtraRewards + 1);
+        uint256 balEarned = baseRewardPool.earned(address(this));
 
-        rewards[0] = TokenAmount(
-            stakingRewards.rewardToken(),
-            stakingRewards.earned(address(this))
+        rewards = new TokenAmount[](2);
+        rewards[0] = TokenAmount(address(BAL), balEarned);
+        rewards[1] = TokenAmount(
+            address(AURA),
+            getMintableAuraRewards(balEarned)
         );
+    }
 
-        for (uint256 i; i < numExtraRewards; ++i) {
-            IVirtualBalanceRewardPool rewardPool = IVirtualBalanceRewardPool(
-                stakingRewards.extraRewards(i)
+    /// @notice Returns the expected amount of AURA to be minted given an amount of BAL rewards
+    /// @dev ref: https://etherscan.io/address/0xc0c293ce456ff0ed870add98a0828dd4d2903dbf#code#F1#L86
+    function getMintableAuraRewards(uint256 _balAmount)
+        public
+        view
+        returns (uint256 amount)
+    {
+        // NOTE: Only correct if AURA.minterMinted() == 0
+        //       minterMinted is a private var in the contract, so we can't access it directly
+        uint256 emissionsMinted = AURA.totalSupply() - AURA.INIT_MINT_AMOUNT();
+
+        uint256 cliff = emissionsMinted.div(AURA.reductionPerCliff());
+        uint256 totalCliffs = AURA.totalCliffs();
+
+        if (cliff < totalCliffs) {
+            uint256 reduction = totalCliffs.sub(cliff).mul(5).div(2).add(700);
+            amount = _balAmount.mul(reduction).div(totalCliffs);
+
+            uint256 amtTillMax = AURA.EMISSIONS_MAX_SUPPLY().sub(
+                emissionsMinted
             );
-            rewards[i] = TokenAmount(
-                rewardPool.rewardToken(),
-                rewardPool.earned(address(this))
-            );
+            if (amount > amtTillMax) {
+                amount = amtTillMax;
+            }
         }
     }
 }
