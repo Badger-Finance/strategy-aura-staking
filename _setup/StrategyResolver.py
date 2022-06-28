@@ -16,7 +16,7 @@ class StrategyResolver(StrategyCoreResolver):
         strategy = self.manager.strategy
         sett = self.manager.sett
         return {
-            "stakingRewards": strategy.stakingRewards(),
+            "baseRewardPool": strategy.baseRewardPool(),
             "bAuraBal": strategy.BAURABAL(),
             "graviAura": strategy.GRAVIAURA(),
             "badgerTree": sett.badgerTree(),
