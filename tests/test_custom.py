@@ -1,7 +1,7 @@
 import brownie
 import time
 
-from brownie import interface, chain, accounts
+from brownie import interface, chain, accounts, StrategyAuraStaking
 from helpers.constants import AddressZero, MaxUint256
 from helpers.time import days
 from rich.console import Console
@@ -103,3 +103,29 @@ def test_claimRewardsOnWithdrawAll(deployer, vault, strategy, want, governance):
 
     vault.withdrawToVault({"from": governance})
     assert aura.balanceOf(strategy) == 0
+
+
+def test_set_wrong_pid(governance, strategy):
+    with brownie.reverts("token mismatch"):
+        strategy.setPid(PID - 1, {"from": governance})
+
+
+def test_set_pid_while_deposits(want, deployer, governance, vault, strategy):
+    startingBalance = want.balanceOf(deployer)
+
+    depositAmount = startingBalance // 2
+    assert depositAmount > 0
+
+    want.approve(vault, MaxUint256, {"from": deployer})
+    vault.deposit(depositAmount, {"from": deployer})
+
+    vault.earn({"from": governance})
+
+    with brownie.reverts("cannot change pid if pending deposits"):
+        strategy.setPid(PID, {"from": governance})
+
+
+def test_initialize_wrong_pid(vault, deployer):
+    strategy = StrategyAuraStaking.deploy({"from": deployer})
+    with brownie.reverts("token mismatch"):
+        strategy.initialize(vault, PID - 1)

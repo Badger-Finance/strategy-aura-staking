@@ -4,7 +4,7 @@ WANT = "0xb460DAa847c45f1C4a41cb05BFB3b51c92e41B36"
 PID = 11
 
 ## Account that has a lot of want (we will "borrow it" for testing)
-WHALE_ADDRESS = "0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e"
+WHALE_ADDRESS = "0x87C0c0A2d4B9e39A1b6b525A2832a3e080ed6640"
 
 ## Address for Badger Registry, used to fill in default addresses
 ## See: https://github.com/Badger-Finance/badger-registry

@@ -127,7 +127,7 @@ contract StrategyAuraStaking is BaseStrategy {
         returns (address[] memory)
     {
         address[] memory protectedTokens = new address[](3);
-        protectedTokens[0] = want; // AURABAL
+        protectedTokens[0] = want;
         protectedTokens[1] = address(AURA);
         protectedTokens[2] = address(BAL);
         return protectedTokens;
