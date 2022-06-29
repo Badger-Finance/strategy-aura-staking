@@ -41,6 +41,11 @@ def test_are_you_trying(deployer, vault, strategy, want, governance):
     assert event["amount"] == 0
 
     ## TEST 3: Does the strategy emit anything?
-    event = harvest.events["TreeDistribution"]
-    assert event["token"] == strategy.BAURABAL()
-    assert event["amount"] > 0
+    events = harvest.events["TreeDistribution"]
+
+    assert len(events) == 2
+    assert events[0]["token"] == strategy.BAURABAL()
+    assert events[0]["amount"] > 0
+
+    assert events[1]["token"] == strategy.GRAVIAURA()
+    assert events[1]["amount"] > 0

@@ -19,8 +19,8 @@ contract StrategyAuraStakingFactory is Initializable {
         IBooster(0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10);
 
     // TODO: Maybe make settable and not constants
-    uint256 public constant PERFORMANCE_FEE_GOVERNANCE = 1000;
-    uint256 public constant PERFORMANCE_FEE_STRATEGIST = 1000;
+    uint256 public constant PERFORMANCE_FEE_GOVERNANCE = 2000;
+    uint256 public constant PERFORMANCE_FEE_STRATEGIST = 0;
     uint256 public constant WITHDRAWAL_FEE = 100;
     uint256 public constant MANAGEMENT_FEE = 0;
 
