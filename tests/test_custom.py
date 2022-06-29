@@ -15,10 +15,8 @@ console = Console()
 
 def state_setup(deployer, vault, strategy, want, keeper):
     startingBalance = want.balanceOf(deployer)
-
-    startingBalance = want.balanceOf(deployer)
     depositAmount = int(startingBalance * 0.8)
-    assert depositAmount != 0
+    assert depositAmount > 0
 
     want.approve(vault, MaxUint256, {"from": deployer})
     vault.deposit(depositAmount, {"from": deployer})

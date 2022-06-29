@@ -13,10 +13,8 @@ import {IVault} from "../interfaces/badger/IVault.sol";
 import {IAsset} from "../interfaces/balancer/IAsset.sol";
 import {IBalancerVault, JoinKind} from "../interfaces/balancer/IBalancerVault.sol";
 import {IBooster} from "../interfaces/aura/IBooster.sol";
-import {IAuraToken} from "interfaces/aura/IAuraToken.sol";
-import {ICrvDepositorWrapper} from "interfaces/aura/ICrvDepositorWrapper.sol";
-import {IBaseRewardPool} from "interfaces/aura/IBaseRewardPool.sol";
-import {IVirtualBalanceRewardPool} from "interfaces/aura/IVirtualBalanceRewardPool.sol";
+import {IAuraToken} from "../interfaces/aura/IAuraToken.sol";
+import {IBaseRewardPool} from "../interfaces/aura/IBaseRewardPool.sol";
 
 contract StrategyAuraStaking is BaseStrategy {
     using SafeMathUpgradeable for uint256;
@@ -33,9 +31,8 @@ contract StrategyAuraStaking is BaseStrategy {
 
     IVault public constant GRAVIAURA =
         IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
-    // TODO: Update
     IVault public constant BAURABAL =
-        IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
+        IVault(0x37d9D2C6035b744849C15F1BFEE8F268a20fCBd8);
 
     IBalancerVault public constant BALANCER_VAULT =
         IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
@@ -174,8 +171,6 @@ contract StrategyAuraStaking is BaseStrategy {
         override
         returns (TokenAmount[] memory harvested)
     {
-        uint256 auraBalBefore = balanceOfWant();
-
         baseRewardPool.getReward();
 
         // Rewards are handled like this:
