@@ -48,8 +48,6 @@ contract StrategyAuraStaking is BaseStrategy {
         IERC20Upgradeable(0xba100000625a3754423978a60c9317c58a424e3D);
     IERC20Upgradeable public constant BALETH_BPT =
         IERC20Upgradeable(0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56);
-    IERC20Upgradeable public constant BB_A_USD =
-        IERC20Upgradeable(0x7B50775383d3D6f0215A8F290f2C9e2eEBBEceb2);
 
     bytes32 public constant BAL_ETH_POOL_ID =
         0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
@@ -174,14 +172,13 @@ contract StrategyAuraStaking is BaseStrategy {
         baseRewardPool.getReward();
 
         // Rewards are handled like this:
-        // BAL       --> BAL/ETH BPT --> AURABAL --> B-AURABAL (emitted)
-        // AURA      --> GRAVIAURA (emitted)
-        // BB_A_USD  --> Left in strategy to be sweeped later
+        // BAL  --> BAL/ETH BPT --> AURABAL --> B-AURABAL (emitted)
+        // AURA --> GRAVIAURA (emitted)
         harvested = new TokenAmount[](2);
         harvested[0].token = address(BAURABAL);
         harvested[1].token = address(GRAVIAURA);
 
-        // BAL --> BAL/ETH BPT --> AURABAL
+        // BAL --> BAL/ETH BPT --> AURABAL --> B-AURABAL
         uint256 balBalance = BAL.balanceOf(address(this));
         uint256 auraBalEarned;
         if (balBalance > 0) {
@@ -214,7 +211,6 @@ contract StrategyAuraStaking is BaseStrategy {
                 address(this)
             );
 
-            // Swap BAL/ETH BPT --> auraBal
             IBalancerVault.FundManagement memory fundManagement = IBalancerVault
                 .FundManagement({
                     sender: address(this),
