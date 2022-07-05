@@ -111,7 +111,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
     /// @dev Return the name of the strategy
     function getName() external pure override returns (string memory) {
-        return "AuraBalStakerStrategy";
+        return "StrategyAuraStaking";
     }
 
     /// @dev Return a list of protected tokens
