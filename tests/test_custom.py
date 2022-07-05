@@ -129,3 +129,8 @@ def test_initialize_wrong_pid(vault, deployer):
     strategy = StrategyAuraStaking.deploy({"from": deployer})
     with brownie.reverts("token mismatch"):
         strategy.initialize(vault, PID - 1)
+
+
+def test_sweep_pid(strategy, governance):
+    with brownie.reverts("token mismatch"):
+        strategy.setPid(PID - 1, {"from": governance})
