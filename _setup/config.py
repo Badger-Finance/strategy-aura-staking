@@ -1,10 +1,10 @@
 ## Token deposited in the vault
-WANT = "0xb460DAa847c45f1C4a41cb05BFB3b51c92e41B36"
+WANT = "0x7B50775383d3D6f0215A8F290f2C9e2eEBBEceb2"  # bb-a-USD
 ## Pool ID on Aura booster
-PID = 11
+PID = 4
 
 ## Account that has a lot of want (we will "borrow it" for testing)
-WHALE_ADDRESS = "0x87C0c0A2d4B9e39A1b6b525A2832a3e080ed6640"
+WHALE_ADDRESS = "0x3a3eE61F7c6e1994a2001762250A5E17B2061b6d"
 
 ## Address for Badger Registry, used to fill in default addresses
 ## See: https://github.com/Badger-Finance/badger-registry
