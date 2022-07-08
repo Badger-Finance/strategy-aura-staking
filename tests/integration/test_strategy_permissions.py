@@ -9,7 +9,7 @@ from _setup.config import PID
 console = Console()
 
 
-def state_setup(deployer, vault, strategy, want, keeper):
+def state_setup(deployer, vault, strategy, want, keeper, topup_rewards):
     startingBalance = want.balanceOf(deployer)
 
     tendable = strategy.isTendable()
@@ -35,16 +35,7 @@ def state_setup(deployer, vault, strategy, want, keeper):
     strategy.harvest({"from": keeper})
 
     chain.sleep(days(3))
-    chain.mine()
-
-    ## Reset rewards if they are set to expire within the next 4 days or are expired already
-    rewardsPool = interface.IBaseRewardPool(strategy.baseRewardPool())
-    if rewardsPool.periodFinish() - int(time.time()) < days(4):
-        booster = interface.IBooster(strategy.booster())
-        booster.earmarkRewards(PID, {"from": deployer})
-        console.print(
-            "[green]baseRewardPool expired or expiring soon - it was reset![/green]"
-        )
+    topup_rewards()
 
     accounts.at(deployer, force=True)
     accounts.at(strategy.strategist(), force=True)
@@ -53,8 +44,10 @@ def state_setup(deployer, vault, strategy, want, keeper):
     accounts.at(vault, force=True)
 
 
-def test_strategy_action_permissions(deployer, vault, strategy, want, keeper):
-    state_setup(deployer, vault, strategy, want, keeper)
+def test_strategy_action_permissions(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
+    state_setup(deployer, vault, strategy, want, keeper, topup_rewards)
 
     tendable = strategy.isTendable()
 
@@ -126,9 +119,11 @@ def test_strategy_action_permissions(deployer, vault, strategy, want, keeper):
                 strategy.setPid(PID, {"from": actor})
 
 
-def test_strategy_pausing_permissions(deployer, vault, strategy, want, keeper):
+def test_strategy_pausing_permissions(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
     # Setup
-    state_setup(deployer, vault, strategy, want, keeper)
+    state_setup(deployer, vault, strategy, want, keeper, topup_rewards)
     randomUser = accounts[8]
     # End Setup
 
@@ -176,9 +171,11 @@ def test_strategy_pausing_permissions(deployer, vault, strategy, want, keeper):
         strategy.tend({"from": keeper})
 
 
-def test_sett_pausing_permissions(deployer, vault, strategy, want, keeper):
+def test_sett_pausing_permissions(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
     # Setup
-    state_setup(deployer, vault, strategy, want, keeper)
+    state_setup(deployer, vault, strategy, want, keeper, topup_rewards)
     randomUser = accounts[8]
     # End Setup
 
@@ -227,9 +224,9 @@ def test_sett_pausing_permissions(deployer, vault, strategy, want, keeper):
     vault.withdrawAll({"from": deployer})
 
 
-def test_sett_earn_permissions(deployer, vault, strategy, want, keeper):
+def test_sett_earn_permissions(deployer, vault, strategy, want, keeper, topup_rewards):
     # Setup
-    state_setup(deployer, vault, strategy, want, keeper)
+    state_setup(deployer, vault, strategy, want, keeper, topup_rewards)
     randomUser = accounts[8]
     # End Setup
 

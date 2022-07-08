@@ -13,7 +13,7 @@ from helpers.utils import (
 console = Console()
 
 
-def state_setup(deployer, vault, strategy, want, keeper):
+def state_setup(deployer, vault, want, keeper, topup_rewards):
     startingBalance = want.balanceOf(deployer)
     depositAmount = int(startingBalance * 0.8)
     assert depositAmount > 0
@@ -27,23 +27,14 @@ def state_setup(deployer, vault, strategy, want, keeper):
     vault.earn({"from": keeper})
 
     chain.sleep(days(3))
-    chain.mine()
-
-    ## Reset rewards if they are set to expire within the next 4 days or are expired already
-    rewardsPool = interface.IBaseRewardPool(strategy.baseRewardPool())
-    if rewardsPool.periodFinish() - int(time.time()) < days(4):
-        booster = interface.IBooster(strategy.booster())
-        booster.earmarkRewards(PID, {"from": deployer})
-        console.print(
-            "[green]baseRewardPool expired or expiring soon - it was reset![/green]"
-        )
-
-    chain.sleep(days(1))
-    chain.mine()
+    # Earmark rewards before harvesting
+    topup_rewards()
 
 
-def test_expected_aura_rewards_match_minted(deployer, vault, strategy, want, keeper):
-    state_setup(deployer, vault, strategy, want, keeper)
+def test_expected_aura_rewards_match_minted(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
+    state_setup(deployer, vault, want, keeper, topup_rewards)
 
     (bal, aura) = strategy.balanceOfRewards()
     # Check that rewards are accrued
@@ -68,7 +59,9 @@ def test_expected_aura_rewards_match_minted(deployer, vault, strategy, want, kee
             break
 
 
-def test_claimRewardsOnWithdrawAll(deployer, vault, strategy, want, governance):
+def test_claimRewardsOnWithdrawAll(
+    deployer, vault, strategy, want, governance, topup_rewards
+):
     startingBalance = want.balanceOf(deployer)
 
     aura = interface.IERC20Detailed(strategy.AURA())
@@ -87,6 +80,7 @@ def test_claimRewardsOnWithdrawAll(deployer, vault, strategy, want, governance):
     vault.earn({"from": governance})
 
     chain.sleep(10000 * 13)  # Mine so we get some interest
+    topup_rewards()
 
     chain.snapshot()
 
