@@ -85,15 +85,6 @@ def test_single_user_harvest_flow(deployer, vault, strategy, want, keeper):
     with brownie.reverts("onlyAuthorizedActors"):
         strategy.harvest({"from": randomUser})
 
-    ## Reset rewards if they are set to expire within the next 4 days or are expired already
-    rewardsPool = interface.IBaseRewardPool(strategy.baseRewardPool())
-    if rewardsPool.periodFinish() - int(time.time()) < days(4):
-        booster = interface.IBooster(strategy.booster())
-        booster.earmarkRewards(PID, {"from": deployer})
-        console.print(
-            "[green]baseRewardPool expired or expiring soon - it was reset![/green]"
-        )
-
     snap.settHarvest({"from": keeper})
 
     chain.sleep(days(1))
@@ -240,15 +231,6 @@ def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, k
 
     chain.sleep(days(3))
     chain.mine()
-
-    ## Reset rewards if they are set to expire within the next 4 days or are expired already
-    rewardsPool = interface.IBaseRewardPool(strategy.baseRewardPool())
-    if rewardsPool.periodFinish() - int(time.time()) < days(4):
-        booster = interface.IBooster(strategy.booster())
-        booster.earmarkRewards(PID, {"from": deployer})
-        console.print(
-            "[green]baseRewardPool expired or expiring soon - it was reset![/green]"
-        )
 
     snap.settHarvest({"from": keeper})
 

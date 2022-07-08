@@ -190,6 +190,12 @@ def setup_share_math(deployer, vault, want, governance):
     return DotMap(depositAmount=depositAmount)
 
 
+@pytest.fixture(autouse=True)
+def topup_rewards(deployer, strategy):
+    booster = interface.IBooster(strategy.BOOSTER())
+    booster.earmarkRewards(PID, {"from": deployer})
+
+
 ## Forces reset before each test
 @pytest.fixture(autouse=True)
 def isolation(fn_isolation):
