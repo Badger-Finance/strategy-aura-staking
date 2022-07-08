@@ -2,7 +2,7 @@ from brownie import *
 from helpers.constants import MaxUint256
 
 
-def test_are_you_trying(deployer, vault, strategy, want, governance):
+def test_are_you_trying(deployer, vault, strategy, want, governance, topup_rewards):
     """
     Verifies that you set up the Strategy properly
     """
@@ -25,6 +25,7 @@ def test_are_you_trying(deployer, vault, strategy, want, governance):
     vault.earn({"from": governance})
 
     chain.sleep(10000 * 13)  # Mine so we get some interest
+    topup_rewards()
 
     ## TEST 1: Does the want get used in any way?
     assert want.balanceOf(vault) == depositAmount - available

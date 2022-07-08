@@ -119,6 +119,7 @@ def deployed(
             WITHDRAWAL_FEE,
             MANAGEMENT_FEE,
         ],
+        {"from": deployer},
     )
     vault.setStrategist(deployer, {"from": governance})
     # NOTE: TheVault starts unpaused
@@ -190,10 +191,14 @@ def setup_share_math(deployer, vault, want, governance):
     return DotMap(depositAmount=depositAmount)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def topup_rewards(deployer, strategy):
     booster = interface.IBooster(strategy.BOOSTER())
-    booster.earmarkRewards(PID, {"from": deployer})
+
+    def inner():
+        booster.earmarkRewards(PID, {"from": deployer})
+
+    return inner
 
 
 ## Forces reset before each test

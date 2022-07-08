@@ -45,7 +45,9 @@ def test_deposit_withdraw_single_user_flow(deployer, vault, strategy, want, keep
     snap.settWithdraw(shares // 2 - 1, {"from": deployer})
 
 
-def test_single_user_harvest_flow(deployer, vault, strategy, want, keeper):
+def test_single_user_harvest_flow(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
     # Setup
     snap = SnapshotManager(vault, strategy, "StrategySnapshot")
     randomUser = accounts[6]
@@ -80,7 +82,7 @@ def test_single_user_harvest_flow(deployer, vault, strategy, want, keeper):
         snap.settTend({"from": keeper})
 
     chain.sleep(days(1))
-    chain.mine()
+    topup_rewards()
 
     with brownie.reverts("onlyAuthorizedActors"):
         strategy.harvest({"from": randomUser})
@@ -191,7 +193,9 @@ def test_migrate_single_user(deployer, vault, strategy, want, governance, keeper
     assert after["stratWant"] == 0
 
 
-def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, keeper):
+def test_single_user_harvest_flow_remove_fees(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
     # Setup
     randomUser = accounts[6]
     snap = SnapshotManager(vault, strategy, "StrategySnapshot")
@@ -230,7 +234,7 @@ def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, k
         snap.settTend({"from": keeper})
 
     chain.sleep(days(3))
-    chain.mine()
+    topup_rewards()
 
     snap.settHarvest({"from": keeper})
 
