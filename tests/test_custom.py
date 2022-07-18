@@ -26,9 +26,12 @@ def state_setup(deployer, vault, want, keeper, topup_rewards):
 
     vault.earn({"from": keeper})
 
-    chain.sleep(days(3))
     # Earmark rewards before harvesting
+    chain.sleep(days(1))
     topup_rewards()
+
+    chain.sleep(days(1))
+    chain.mine()
 
 
 def test_expected_aura_rewards_match_minted(
@@ -79,8 +82,11 @@ def test_claimRewardsOnWithdrawAll(
 
     vault.earn({"from": governance})
 
-    chain.sleep(10000 * 13)  # Mine so we get some interest
+    chain.sleep(days(1))
     topup_rewards()
+
+    chain.sleep(days(1))
+    chain.mine()
 
     chain.snapshot()
 

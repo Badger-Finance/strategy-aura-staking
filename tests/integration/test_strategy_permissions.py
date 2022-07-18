@@ -34,8 +34,11 @@ def state_setup(deployer, vault, strategy, want, keeper, topup_rewards):
 
     strategy.harvest({"from": keeper})
 
-    chain.sleep(days(3))
+    chain.sleep(days(1))
     topup_rewards()
+
+    chain.sleep(days(1))
+    chain.mine()
 
     accounts.at(deployer, force=True)
     accounts.at(strategy.strategist(), force=True)

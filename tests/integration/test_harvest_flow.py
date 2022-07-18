@@ -84,6 +84,9 @@ def test_single_user_harvest_flow(
     chain.sleep(days(1))
     topup_rewards()
 
+    chain.sleep(days(1))
+    chain.mine()
+
     with brownie.reverts("onlyAuthorizedActors"):
         strategy.harvest({"from": randomUser})
 
@@ -220,6 +223,9 @@ def test_single_user_harvest_flow_remove_fees(
         snap.settTend({"from": keeper})
 
     chain.sleep(days(1))
+    topup_rewards()
+
+    chain.sleep(days(1))
     chain.mine()
 
     with brownie.reverts("onlyAuthorizedActors"):
@@ -232,9 +238,6 @@ def test_single_user_harvest_flow_remove_fees(
 
     if tendable:
         snap.settTend({"from": keeper})
-
-    chain.sleep(days(3))
-    topup_rewards()
 
     snap.settHarvest({"from": keeper})
 

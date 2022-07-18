@@ -1,5 +1,6 @@
 from brownie import *
 from helpers.constants import MaxUint256
+from helpers.time import days
 
 
 def test_are_you_trying(deployer, vault, strategy, want, governance, topup_rewards):
@@ -24,8 +25,11 @@ def test_are_you_trying(deployer, vault, strategy, want, governance, topup_rewar
 
     vault.earn({"from": governance})
 
-    chain.sleep(10000 * 13)  # Mine so we get some interest
+    chain.sleep(days(1))
     topup_rewards()
+
+    chain.sleep(days(1))
+    chain.mine()
 
     ## TEST 1: Does the want get used in any way?
     assert want.balanceOf(vault) == depositAmount - available
