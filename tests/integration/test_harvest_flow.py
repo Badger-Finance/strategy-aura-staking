@@ -45,7 +45,9 @@ def test_deposit_withdraw_single_user_flow(deployer, vault, strategy, want, keep
     snap.settWithdraw(shares // 2 - 1, {"from": deployer})
 
 
-def test_single_user_harvest_flow(deployer, vault, strategy, want, keeper):
+def test_single_user_harvest_flow(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
     # Setup
     snap = SnapshotManager(vault, strategy, "StrategySnapshot")
     randomUser = accounts[6]
@@ -80,19 +82,13 @@ def test_single_user_harvest_flow(deployer, vault, strategy, want, keeper):
         snap.settTend({"from": keeper})
 
     chain.sleep(days(1))
+    topup_rewards()
+
+    chain.sleep(days(1))
     chain.mine()
 
     with brownie.reverts("onlyAuthorizedActors"):
         strategy.harvest({"from": randomUser})
-
-    ## Reset rewards if they are set to expire within the next 4 days or are expired already
-    rewardsPool = interface.IBaseRewardPool(strategy.baseRewardPool())
-    if rewardsPool.periodFinish() - int(time.time()) < days(4):
-        booster = interface.IBooster(strategy.booster())
-        booster.earmarkRewards(PID, {"from": deployer})
-        console.print(
-            "[green]baseRewardPool expired or expiring soon - it was reset![/green]"
-        )
 
     snap.settHarvest({"from": keeper})
 
@@ -200,7 +196,9 @@ def test_migrate_single_user(deployer, vault, strategy, want, governance, keeper
     assert after["stratWant"] == 0
 
 
-def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, keeper):
+def test_single_user_harvest_flow_remove_fees(
+    deployer, vault, strategy, want, keeper, topup_rewards
+):
     # Setup
     randomUser = accounts[6]
     snap = SnapshotManager(vault, strategy, "StrategySnapshot")
@@ -225,6 +223,9 @@ def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, k
         snap.settTend({"from": keeper})
 
     chain.sleep(days(1))
+    topup_rewards()
+
+    chain.sleep(days(1))
     chain.mine()
 
     with brownie.reverts("onlyAuthorizedActors"):
@@ -237,18 +238,6 @@ def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, k
 
     if tendable:
         snap.settTend({"from": keeper})
-
-    chain.sleep(days(3))
-    chain.mine()
-
-    ## Reset rewards if they are set to expire within the next 4 days or are expired already
-    rewardsPool = interface.IBaseRewardPool(strategy.baseRewardPool())
-    if rewardsPool.periodFinish() - int(time.time()) < days(4):
-        booster = interface.IBooster(strategy.booster())
-        booster.earmarkRewards(PID, {"from": deployer})
-        console.print(
-            "[green]baseRewardPool expired or expiring soon - it was reset![/green]"
-        )
 
     snap.settHarvest({"from": keeper})
 
