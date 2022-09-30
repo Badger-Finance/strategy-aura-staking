@@ -9,6 +9,8 @@ interface IVault {
 
     function reportAdditionalToken(address _token) external;
 
+    function getPricePerFullShare() external view returns (uint256);
+
     // Fees
     function performanceFeeGovernance() external view returns (uint256);
 
