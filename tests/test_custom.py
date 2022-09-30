@@ -134,3 +134,20 @@ def test_initialize_wrong_pid(vault, deployer):
 def test_sweep_pid(strategy, governance):
     with brownie.reverts("token mismatch"):
         strategy.setPid(PID - 1, {"from": governance})
+
+
+def test_aura_harvest_swapping(
+    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_profitable, balancer_vault
+):
+    state_setup(deployer, vault, want, keeper, topup_rewards)
+
+
+def test_aura_harvest_depositing(
+    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_unprofitable, balancer_vault
+):
+    state_setup(deployer, vault, want, keeper, topup_rewards)
+
+
+    
+    
+

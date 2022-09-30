@@ -8,7 +8,8 @@ from brownie import (
 from helpers.constants import MaxUint256
 from dotmap import DotMap
 from rich.console import Console
-
+from pycoingecko import CoinGeckoAPI
+from helpers.utils import approx
 from _setup.config import (
     WANT,
     PID,
@@ -17,8 +18,9 @@ from _setup.config import (
     PERFORMANCE_FEE_STRATEGIST,
     WITHDRAWAL_FEE,
     MANAGEMENT_FEE,
+    ON_CHAIN_PRICER,
+    GRAVIAURA_WHALE
 )
-
 
 console = Console()
 
@@ -125,7 +127,7 @@ def deployed(
     # NOTE: TheVault starts unpaused
 
     strategy = StrategyAuraStaking.deploy({"from": deployer})
-    strategy.initialize(vault, PID)
+    strategy.initialize(vault, PID, ON_CHAIN_PRICER)
     # NOTE: Strategy starts unpaused
 
     vault.setStrategy(strategy, {"from": governance})
@@ -179,6 +181,26 @@ def withdrawalFee(deployed):
 
 
 @pytest.fixture
+def balancer_vault(deployed):
+    return interface.IBalancerVault(deployed.strategy.BALANCER_VAULT())
+
+
+@pytest.fixture
+def graviaura_whale():
+    return accounts.at(GRAVIAURA_WHALE, force=True)
+
+
+@pytest.fixture
+def graviaura(deployed):
+    return interface.IVault(deployed.strategy.GRAVIAURA())
+
+
+@pytest.fixture
+def weth(deployed):
+    return interface.IWETH9(deployed.strategy.WETH())
+
+
+@pytest.fixture
 def setup_share_math(deployer, vault, want, governance):
 
     depositAmount = int(want.balanceOf(deployer) * 0.5)
@@ -199,6 +221,51 @@ def topup_rewards(deployer, strategy):
         booster.earmarkRewards(PID, {"from": deployer})
 
     return inner
+
+
+@pytest.fixture
+def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, graviaura):
+    strat = deployed.strategy
+    # Check if pool is already unbalanced for graviAURA by at least 10%
+    ids = ["aura-bal", "gravitationally-bound-aura", "weth"]
+    prices = CoinGeckoAPI().get_price(ids, "usd")
+    balances = balancer_vault.getPoolTokens(strat.AURABAL_GRAVIAURA_WETH_POOL_ID())[1]
+    balances_usd = []
+    for i, balance in enumerate(balances):
+        balances_usd.append(prices[ids[i]]["usd"] * (balance / 1e18))
+
+    # Check that balance difference between wETH and graviAURA is already more than 10%
+    if approx(balances_usd[1], balances_usd[2], 10):
+        # Sell graviAURA for WETH to imbalance pool
+        deposit_amount = graviaura.balanceOf(graviaura_whale) // 4 ## Can only buy up to 30% of pool
+        swap = (strat.AURABAL_GRAVIAURA_WETH_POOL_ID(), 0, graviaura.address, strat.WETH(), deposit_amount, 0)
+        fund = (graviaura_whale, False, graviaura_whale, False)
+        graviaura.approve(balancer_vault, MaxUint256, {'from': graviaura_whale})
+        balancer_vault.swap(swap, fund, 0, MaxUint256, {'from': graviaura_whale})
+
+
+@pytest.fixture
+def make_graviaura_pool_unprofitable(balancer_vault, deployed, graviaura, weth, user):
+    strat = deployed.strategy
+    # Check if pool is already balanced for graviAURA within 2%
+    ids = ["aura-bal", "gravitationally-bound-aura", "weth"]
+    prices = CoinGeckoAPI().get_price(ids, "usd")
+    balances = balancer_vault.getPoolTokens(strat.AURABAL_GRAVIAURA_WETH_POOL_ID())[1]
+    balances_usd = []
+    for i, balance in enumerate(balances):
+        balances_usd.append(prices[ids[i]]["usd"] * (balance / 1e18))
+
+    # Check if pool is unbalanced for graviAURA (Less graviAURA than wETH in USD terms)
+    if balances_usd[1] > balances_usd[2]:
+        # Buy graviAURA from WETH to imbalance pool
+        deposit_amount_usd = balances_usd[1] - balances_usd[2] * 2
+        deposit_amount = int((deposit_amount_usd / prices[ids[2]]["usd"]) * 1e18)
+        weth.deposit({"value": deposit_amount, "from": user})
+        assert weth.balanceOf(user) == deposit_amount
+        swap = (strat.AURABAL_GRAVIAURA_WETH_POOL_ID(), 0, weth.address, graviaura.address, deposit_amount, 0)
+        fund = (user.address, False, user.address, False)
+        weth.approve(balancer_vault, MaxUint256, {'from': user})
+        balancer_vault.swap(swap, fund, 0, MaxUint256, {'from': user})
 
 
 ## Forces reset before each test
