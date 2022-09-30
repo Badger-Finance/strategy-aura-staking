@@ -15,6 +15,7 @@ import {IBalancerVault, JoinKind} from "../interfaces/balancer/IBalancerVault.so
 import {IBooster} from "../interfaces/aura/IBooster.sol";
 import {IAuraToken} from "../interfaces/aura/IAuraToken.sol";
 import {IBaseRewardPool} from "../interfaces/aura/IBaseRewardPool.sol";
+import {IOnChainPricing, Quote, SwapType} from "../interfaces/badger/IOnChainPricing.sol";
 
 contract StrategyAuraStaking is BaseStrategy {
     using SafeMathUpgradeable for uint256;
@@ -25,6 +26,9 @@ contract StrategyAuraStaking is BaseStrategy {
 
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
+    uint256 public auraToGraviAuraMinOutBps;
+
+    IOnChainPricing public pricer;
 
     IBooster public constant BOOSTER =
         IBooster(0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10);
@@ -53,11 +57,15 @@ contract StrategyAuraStaking is BaseStrategy {
         0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
     bytes32 public constant AURABAL_BALETH_BPT_POOL_ID =
         0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
+    bytes32 public constant AURA_WETH_BPT_POOL_ID =
+        0xc29562b045d80fd77c69bec09541f5c16fe20d9d000200000000000000000251;
+    bytes32 public constant AURABAL_GRAVIAURA_WETH_POOL_ID =
+        0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
 
     /// @dev Initialize the Strategy with security settings as well as tokens
     /// @notice Proxies will set any non constant variable you declare as default value
     /// @dev add any extra changeable variable at end of initializer as shown
-    function initialize(address _vault, uint256 _pid) public initializer {
+    function initialize(address _vault, uint256 _pid, address _pricer) public initializer {
         __BaseStrategy_init(_vault);
 
         (address lptoken, , , address crvRewards, , ) = BOOSTER.poolInfo(_pid);
@@ -70,6 +78,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
         claimRewardsOnWithdrawAll = true;
         balEthBptToAuraBalMinOutBps = 9500; // max 5% slippage
+        pricer = IOnChainPricing(_pricer);
 
         // Approvals
         IERC20Upgradeable(lptoken).safeApprove(
@@ -107,6 +116,20 @@ contract StrategyAuraStaking is BaseStrategy {
         require(_minOutBps <= MAX_BPS, "Invalid minOutBps");
 
         balEthBptToAuraBalMinOutBps = _minOutBps;
+    }
+
+    function setauraToGraviAuraMinOutBps(uint256 _minOutBps) external {
+        _onlyGovernanceOrStrategist();
+        require(_minOutBps <= MAX_BPS, "Invalid minOutBps");
+
+        auraToGraviAuraMinOutBps = _minOutBps;
+    }
+
+    /// @dev Set the Pricer Contract used to det on-chian swap quotes
+    /// @param newPricer - the new pricer
+    function setPricer(IOnChainPricing newPricer) external {
+        _onlyGovernance();
+        pricer = newPricer;
     }
 
     /// @dev Return the name of the strategy
@@ -247,9 +270,19 @@ contract StrategyAuraStaking is BaseStrategy {
         // AURA --> graviAURA
         uint256 auraBalance = AURA.balanceOf(address(this));
         if (auraBalance > 0) {
-            GRAVIAURA.deposit(auraBalance);
-            uint256 graviAuraBalance = GRAVIAURA.balanceOf(address(this));
-
+            Quote memory result = pricer.findOptimalSwap(
+                address(AURA), address(GRAVIAURA), auraBalance
+            );
+            uint256 graviAuraBalance;
+            if (
+                result.amountOut > (auraBalance * 1e18) / GRAVIAURA.getPricePerFullShare() &&
+                result.name == SwapType.BALANCERWITHWETH // Optimal price comes from AURA -> WETH -> graviAURA on Balancer
+            ) {
+                graviAuraBalance = swapAuraForGraviaura(auraBalance, result.amountOut);
+            } else {
+                GRAVIAURA.deposit(auraBalance);
+                graviAuraBalance = GRAVIAURA.balanceOf(address(this));
+            }
             harvested[1].amount = graviAuraBalance;
             _processExtraToken(address(GRAVIAURA), graviAuraBalance);
         }
@@ -311,5 +344,52 @@ contract StrategyAuraStaking is BaseStrategy {
                 amount = amtTillMax;
             }
         }
+    }
+
+    // Internal Helpers
+
+    /// @notice Swaps the given amount of AURA for graviAURA.
+    /// @dev The swap is only carried out if the execution price is better or equal than the quoted
+    /// @param _auraAmount The amount of BAL to sell.
+    /// @return graviAuraEarned_ The amount of USDC earned.
+    function swapAuraForGraviaura(uint256 _auraAmount, uint256 _minGraviAuraOut) internal returns (uint256 graviAuraEarned_) {
+        IAsset[] memory assetArray = new IAsset[](3);
+        assetArray[0] = IAsset(address(AURA));
+        assetArray[1] = IAsset(address(WETH));
+        assetArray[2] = IAsset(address(GRAVIAURA));
+
+        int256[] memory limits = new int256[](3);
+        limits[0] = int256(_auraAmount);
+        limits[2] = -int256(_minGraviAuraOut);
+        IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](2);
+        // AURA --> WETH
+        swaps[0] = IBalancerVault.BatchSwapStep({
+            poolId: AURA_WETH_BPT_POOL_ID,
+            assetInIndex: 0,
+            assetOutIndex: 1,
+            amount: _auraAmount,
+            userData: new bytes(0)
+        });
+        // WETH --> GRAVIAURA
+        swaps[1] = IBalancerVault.BatchSwapStep({
+            poolId: AURABAL_GRAVIAURA_WETH_POOL_ID,
+            assetInIndex: 2,
+            assetOutIndex: 1,
+            amount: 0, // 0 means all from last step
+            userData: new bytes(0)
+        });
+
+        IBalancerVault.FundManagement memory fundManagement = IBalancerVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(address(this)),
+            toInternalBalance: false
+        });
+
+        int256[] memory assetBalances = BALANCER_VAULT.batchSwap(
+            IBalancerVault.SwapKind.GIVEN_IN, swaps, assetArray, fundManagement, limits, type(uint256).max
+        );
+
+        graviAuraEarned_ = uint256(-assetBalances[assetBalances.length - 1]);
     }
 }
