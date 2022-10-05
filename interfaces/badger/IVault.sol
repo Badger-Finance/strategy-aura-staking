@@ -9,6 +9,10 @@ interface IVault {
 
     function reportAdditionalToken(address _token) external;
 
+    function getPricePerFullShare() external view returns (uint256);
+
+    function totalSupply() external view returns (uint256);
+
     // Fees
     function performanceFeeGovernance() external view returns (uint256);
 
@@ -31,6 +35,8 @@ interface IVault {
 
     // External
     function deposit(uint256 _amount) external;
+
+    function approve(address spender, uint256 amount) external;
 
     function balanceOf(address) external view returns (uint256);
 

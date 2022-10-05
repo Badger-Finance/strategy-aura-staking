@@ -13,32 +13,9 @@ from helpers.utils import (
 console = Console()
 
 
-def state_setup(deployer, vault, want, keeper, topup_rewards):
-    startingBalance = want.balanceOf(deployer)
-    depositAmount = int(startingBalance * 0.8)
-    assert depositAmount > 0
-
-    want.approve(vault, MaxUint256, {"from": deployer})
-    vault.deposit(depositAmount, {"from": deployer})
-
-    chain.sleep(days(1))
-    chain.mine()
-
-    vault.earn({"from": keeper})
-
-    # Earmark rewards before harvesting
-    chain.sleep(days(1))
-    topup_rewards()
-
-    chain.sleep(days(1))
-    chain.mine()
-
-
 def test_expected_aura_rewards_match_minted(
-    deployer, vault, strategy, want, keeper, topup_rewards
+    strategy, keeper, state_setup
 ):
-    state_setup(deployer, vault, want, keeper, topup_rewards)
-
     (bal, aura) = strategy.balanceOfRewards()
     # Check that rewards are accrued
     bal_amount = bal[1]
@@ -134,3 +111,32 @@ def test_initialize_wrong_pid(vault, deployer):
 def test_sweep_pid(strategy, governance):
     with brownie.reverts("token mismatch"):
         strategy.setPid(PID - 1, {"from": governance})
+
+
+def test_aura_harvest_swapping(
+    strategy, keeper, make_graviaura_pool_profitable, graviaura
+):
+    # Harvesting should handle Aura -> graviaURA via swap
+    initial_total_supply = graviaura.totalSupply()
+
+    tx = strategy.harvest({"from": keeper})
+    # TODO: Check events to ensure that swap took place
+
+    assert initial_total_supply == graviaura.totalSupply()
+
+
+def test_aura_harvest_depositing(
+    strategy, keeper, make_graviaura_pool_unprofitable, graviaura
+):
+    # Harvesting should handle Aura -> graviaURA via swap
+    initial_total_supply = graviaura.totalSupply()
+
+    tx = strategy.harvest({"from": keeper})
+    # TODO: Check events to ensure that deposit took place
+
+    assert initial_total_supply < graviaura.totalSupply()
+
+
+    
+    
+
