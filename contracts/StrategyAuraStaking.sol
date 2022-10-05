@@ -275,7 +275,7 @@ contract StrategyAuraStaking is BaseStrategy {
             );
             uint256 graviAuraBalance;
             if (
-                result.amountOut > (auraBalance * 1e18) / GRAVIAURA.getPricePerFullShare() &&
+                (result.amountOut > auraBalance.mul(1e18).div(GRAVIAURA.getPricePerFullShare())) &&
                 result.name == SwapType.BALANCERWITHWETH // Optimal price comes from AURA -> WETH -> graviAURA on Balancer
             ) {
                 graviAuraBalance = swapAuraForGraviaura(auraBalance, result.amountOut);
@@ -350,8 +350,8 @@ contract StrategyAuraStaking is BaseStrategy {
 
     /// @notice Swaps the given amount of AURA for graviAURA.
     /// @dev The swap is only carried out if the execution price is better or equal than the quoted
-    /// @param _auraAmount The amount of BAL to sell.
-    /// @return graviAuraEarned_ The amount of USDC earned.
+    /// @param _auraAmount The amount of AURA to sell.
+    /// @return graviAuraEarned_ The amount of graviAURA earned.
     function swapAuraForGraviaura(uint256 _auraAmount, uint256 _minGraviAuraOut) internal returns (uint256 graviAuraEarned_) {
         IAsset[] memory assetArray = new IAsset[](3);
         assetArray[0] = IAsset(address(AURA));
@@ -373,8 +373,8 @@ contract StrategyAuraStaking is BaseStrategy {
         // WETH --> GRAVIAURA
         swaps[1] = IBalancerVault.BatchSwapStep({
             poolId: AURABAL_GRAVIAURA_WETH_POOL_ID,
-            assetInIndex: 2,
-            assetOutIndex: 1,
+            assetInIndex: 1,
+            assetOutIndex: 2,
             amount: 0, // 0 means all from last step
             userData: new bytes(0)
         });
