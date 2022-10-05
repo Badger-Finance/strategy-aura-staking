@@ -137,15 +137,29 @@ def test_sweep_pid(strategy, governance):
 
 
 def test_aura_harvest_swapping(
-    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_profitable, balancer_vault
+    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_profitable, balancer_vault, graviaura
 ):
     state_setup(deployer, vault, want, keeper, topup_rewards)
+
+    # Harvesting should handle Aura -> graviaURA via swap
+    initial_total_supply = graviaura.totalSupply()
+
+    tx = strategy.harvest({"from": keeper})
+
+    assert initial_total_supply == graviaura.totalSupply()
 
 
 def test_aura_harvest_depositing(
-    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_unprofitable, balancer_vault
+    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_unprofitable, balancer_vault, graviaura
 ):
     state_setup(deployer, vault, want, keeper, topup_rewards)
+
+    # Harvesting should handle Aura -> graviaURA via swap
+    initial_total_supply = graviaura.totalSupply()
+
+    tx = strategy.harvest({"from": keeper})
+
+    assert initial_total_supply < graviaura.totalSupply()
 
 
     

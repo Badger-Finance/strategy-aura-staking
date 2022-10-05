@@ -201,6 +201,11 @@ def weth(deployed):
 
 
 @pytest.fixture
+def pricer(deployed):
+    return interface.IOnChainPricing(deployed.strategy.pricer())
+
+
+@pytest.fixture
 def setup_share_math(deployer, vault, want, governance):
 
     depositAmount = int(want.balanceOf(deployer) * 0.5)
@@ -224,24 +229,26 @@ def topup_rewards(deployer, strategy):
 
 
 @pytest.fixture
-def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, graviaura):
+def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, graviaura, pricer):
     strat = deployed.strategy
-    # Check if pool is already unbalanced for graviAURA by at least 10%
-    ids = ["aura-bal", "gravitationally-bound-aura", "weth"]
-    prices = CoinGeckoAPI().get_price(ids, "usd")
-    balances = balancer_vault.getPoolTokens(strat.AURABAL_GRAVIAURA_WETH_POOL_ID())[1]
-    balances_usd = []
-    for i, balance in enumerate(balances):
-        balances_usd.append(prices[ids[i]]["usd"] * (balance / 1e18))
+
+    amount_deposit = 5000e18 / graviaura.getPricePerFullShare() * 1e18
+    swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), 5000e18)
+    assert swap_quote[0] == 6 # Confirm that swap comes from aura -> weth -> graviAura
+    amount_swap = swap_quote[1]
 
     # Check that balance difference between wETH and graviAURA is already more than 10%
-    if approx(balances_usd[1], balances_usd[2], 10):
+    if amount_deposit > amount_swap:
         # Sell graviAURA for WETH to imbalance pool
         deposit_amount = graviaura.balanceOf(graviaura_whale) // 4 ## Can only buy up to 30% of pool
         swap = (strat.AURABAL_GRAVIAURA_WETH_POOL_ID(), 0, graviaura.address, strat.WETH(), deposit_amount, 0)
         fund = (graviaura_whale, False, graviaura_whale, False)
         graviaura.approve(balancer_vault, MaxUint256, {'from': graviaura_whale})
         balancer_vault.swap(swap, fund, 0, MaxUint256, {'from': graviaura_whale})
+
+    swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), 5000e18)
+    assert swap_quote[0] == 6 # Confirm that swap comes from aura -> weth -> graviAura
+    assert swap_quote[1] > amount_deposit
 
 
 @pytest.fixture
