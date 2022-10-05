@@ -91,6 +91,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
         AURABAL.safeApprove(address(BAURABAL), type(uint256).max);
         AURA.approve(address(GRAVIAURA), type(uint256).max);
+        AURA.approve(address(BALANCER_VAULT), type(uint256).max);
     }
 
     function setPid(uint256 _pid) external {
