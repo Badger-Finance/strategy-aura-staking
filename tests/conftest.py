@@ -4,12 +4,12 @@ from brownie import (
     TheVault,
     interface,
     accounts,
+    chain
 )
 from helpers.constants import MaxUint256
 from dotmap import DotMap
 from rich.console import Console
 from pycoingecko import CoinGeckoAPI
-from helpers.utils import approx
 from _setup.config import (
     WANT,
     PID,
@@ -21,6 +21,7 @@ from _setup.config import (
     ON_CHAIN_PRICER,
     GRAVIAURA_WHALE
 )
+from helpers.time import days
 
 console = Console()
 
@@ -229,11 +230,14 @@ def topup_rewards(deployer, strategy):
 
 
 @pytest.fixture
-def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, graviaura, pricer):
+def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, graviaura, pricer, state_setup):
     strat = deployed.strategy
 
-    amount_deposit = 5000e18 / graviaura.getPricePerFullShare() * 1e18
-    swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), 5000e18)
+    (_, aura) = strat.balanceOfRewards()
+    aura_amount = aura[1]
+
+    amount_deposit = aura_amount / graviaura.getPricePerFullShare() * 1e18
+    swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), aura_amount)
     assert swap_quote[0] == 6 # Confirm that swap comes from aura -> weth -> graviAura
     amount_swap = swap_quote[1]
 
@@ -246,7 +250,7 @@ def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, gr
         graviaura.approve(balancer_vault, MaxUint256, {'from': graviaura_whale})
         balancer_vault.swap(swap, fund, 0, MaxUint256, {'from': graviaura_whale})
 
-    swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), 5000e18)
+    swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), aura_amount)
     assert swap_quote[0] == 6 # Confirm that swap comes from aura -> weth -> graviAura
     assert swap_quote[1] > amount_deposit
 
@@ -273,6 +277,28 @@ def make_graviaura_pool_unprofitable(balancer_vault, deployed, graviaura, weth, 
         fund = (user.address, False, user.address, False)
         weth.approve(balancer_vault, MaxUint256, {'from': user})
         balancer_vault.swap(swap, fund, 0, MaxUint256, {'from': user})
+
+
+@pytest.fixture
+def state_setup(deployer, vault, want, keeper, topup_rewards):
+    startingBalance = want.balanceOf(deployer)
+    depositAmount = int(startingBalance * 0.8)
+    assert depositAmount > 0
+
+    want.approve(vault, MaxUint256, {"from": deployer})
+    vault.deposit(depositAmount, {"from": deployer})
+
+    chain.sleep(days(1))
+    chain.mine()
+
+    vault.earn({"from": keeper})
+
+    # Earmark rewards before harvesting
+    chain.sleep(days(1))
+    topup_rewards()
+
+    chain.sleep(days(1))
+    chain.mine()
 
 
 ## Forces reset before each test

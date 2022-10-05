@@ -13,32 +13,9 @@ from helpers.utils import (
 console = Console()
 
 
-def state_setup(deployer, vault, want, keeper, topup_rewards):
-    startingBalance = want.balanceOf(deployer)
-    depositAmount = int(startingBalance * 0.8)
-    assert depositAmount > 0
-
-    want.approve(vault, MaxUint256, {"from": deployer})
-    vault.deposit(depositAmount, {"from": deployer})
-
-    chain.sleep(days(1))
-    chain.mine()
-
-    vault.earn({"from": keeper})
-
-    # Earmark rewards before harvesting
-    chain.sleep(days(1))
-    topup_rewards()
-
-    chain.sleep(days(1))
-    chain.mine()
-
-
 def test_expected_aura_rewards_match_minted(
-    deployer, vault, strategy, want, keeper, topup_rewards
+    strategy, keeper, state_setup
 ):
-    state_setup(deployer, vault, want, keeper, topup_rewards)
-
     (bal, aura) = strategy.balanceOfRewards()
     # Check that rewards are accrued
     bal_amount = bal[1]
@@ -137,10 +114,8 @@ def test_sweep_pid(strategy, governance):
 
 
 def test_aura_harvest_swapping(
-    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_profitable, balancer_vault, graviaura
+    strategy, keeper, make_graviaura_pool_profitable, graviaura
 ):
-    state_setup(deployer, vault, want, keeper, topup_rewards)
-
     # Harvesting should handle Aura -> graviaURA via swap
     initial_total_supply = graviaura.totalSupply()
 
@@ -150,10 +125,8 @@ def test_aura_harvest_swapping(
 
 
 def test_aura_harvest_depositing(
-    deployer, vault, strategy, want, keeper, topup_rewards, make_graviaura_pool_unprofitable, balancer_vault, graviaura
+    strategy, keeper, make_graviaura_pool_unprofitable, graviaura
 ):
-    state_setup(deployer, vault, want, keeper, topup_rewards)
-
     # Harvesting should handle Aura -> graviaURA via swap
     initial_total_supply = graviaura.totalSupply()
 
