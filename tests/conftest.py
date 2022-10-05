@@ -241,7 +241,6 @@ def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, gr
     assert swap_quote[0] == 6 # Confirm that swap comes from aura -> weth -> graviAura
     amount_swap = swap_quote[1]
 
-    # Check that balance difference between wETH and graviAURA is already more than 10%
     if amount_deposit > amount_swap:
         # Sell graviAURA for WETH to imbalance pool
         deposit_amount = graviaura.balanceOf(graviaura_whale) // 4 ## Can only buy up to 30% of pool
@@ -250,13 +249,13 @@ def make_graviaura_pool_profitable(balancer_vault, graviaura_whale, deployed, gr
         graviaura.approve(balancer_vault, MaxUint256, {'from': graviaura_whale})
         balancer_vault.swap(swap, fund, 0, MaxUint256, {'from': graviaura_whale})
 
-    swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), aura_amount)
-    assert swap_quote[0] == 6 # Confirm that swap comes from aura -> weth -> graviAura
-    assert swap_quote[1] > amount_deposit
+        swap_quote = pricer.findOptimalSwap(strat.AURA(), strat.GRAVIAURA(), aura_amount)
+        assert swap_quote[0] == 6 # Confirm that swap comes from aura -> weth -> graviAura
+        assert swap_quote[1] > amount_deposit
 
 
 @pytest.fixture
-def make_graviaura_pool_unprofitable(balancer_vault, deployed, graviaura, weth, user):
+def make_graviaura_pool_unprofitable(balancer_vault, deployed, graviaura, weth, user, state_setup):
     strat = deployed.strategy
     # Check if pool is already balanced for graviAURA within 2%
     ids = ["aura-bal", "gravitationally-bound-aura", "weth"]

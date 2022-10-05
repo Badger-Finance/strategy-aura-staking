@@ -120,6 +120,7 @@ def test_aura_harvest_swapping(
     initial_total_supply = graviaura.totalSupply()
 
     tx = strategy.harvest({"from": keeper})
+    # TODO: Check events to ensure that swap took place
 
     assert initial_total_supply == graviaura.totalSupply()
 
@@ -131,6 +132,7 @@ def test_aura_harvest_depositing(
     initial_total_supply = graviaura.totalSupply()
 
     tx = strategy.harvest({"from": keeper})
+    # TODO: Check events to ensure that deposit took place
 
     assert initial_total_supply < graviaura.totalSupply()
 
