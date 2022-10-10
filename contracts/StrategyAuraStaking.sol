@@ -26,7 +26,6 @@ contract StrategyAuraStaking is BaseStrategy {
 
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
-    uint256 public auraToGraviAuraMinOutBps;
 
     IOnChainPricing public pricer;
 
@@ -119,11 +118,10 @@ contract StrategyAuraStaking is BaseStrategy {
         balEthBptToAuraBalMinOutBps = _minOutBps;
     }
 
-    function setauraToGraviAuraMinOutBps(uint256 _minOutBps) external {
+    /// @dev Approves AURA to be used on the Balancer vault in case of upgrade
+    function setSpecialAuraAllowance() external {
         _onlyGovernanceOrStrategist();
-        require(_minOutBps <= MAX_BPS, "Invalid minOutBps");
-
-        auraToGraviAuraMinOutBps = _minOutBps;
+        AURA.approve(address(BALANCER_VAULT), type(uint256).max);
     }
 
     /// @dev Set the Pricer Contract used to det on-chian swap quotes
