@@ -46,6 +46,7 @@ def test_aura_contracts_migration(VAULT_ID):
     # Fast forward to end of rewards period for current contracts
     C.print(f"Sleeping for {(LAST_PERIOD_FINISH - chain.time())/(days(1))} days")
     chain.sleep(LAST_PERIOD_FINISH - chain.time())
+    chain.mine()
     assert strat_current.pid() == CURRENT_PIDS[VAULT_ID]
     _, _, _, rewards_address, _, _ = booster_current.poolInfo(strat_current.pid())
     assert strat_current.baseRewardPool() == rewards_address
@@ -60,7 +61,7 @@ def test_aura_contracts_migration(VAULT_ID):
     for event in tx.events["Transfer"]:
         if event["from"] == rewards_address and event["to"] == strat_current.address:
             value = event["value"]
-            assert value > bal_earned
+            assert value == bal_earned
             C.log(f"BAL harvested: {value / 1e18}")
     for event in tx.events["Transfer"]:
         if event["from"] == AddressZero and event["to"] == strat_current.address:
@@ -119,6 +120,7 @@ def test_aura_contracts_migration(VAULT_ID):
 
     ### 5. Advance a few days in time and harvest
     chain.sleep(days(3))
+    chain.mine()
     C.log("Fast-forwarding 3 days and harvesting...")
 
     # Earmark rewards 
