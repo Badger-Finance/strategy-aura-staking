@@ -29,6 +29,8 @@ interface IVault {
 
     function treasury() external view returns (address);
 
+    function strategy() external view returns (address);
+
     // External
     function deposit(uint256 _amount) external;
 
@@ -37,4 +39,8 @@ interface IVault {
     function setStrategy(address _strategy) external;
 
     function setGovernance(address _governance) external;
+
+    function withdrawToVault() external;
+
+    function earn() external;
 }

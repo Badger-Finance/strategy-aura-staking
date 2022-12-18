@@ -27,7 +27,7 @@ contract StrategyAuraStaking is BaseStrategy {
     uint256 public balEthBptToAuraBalMinOutBps;
 
     IBooster public constant BOOSTER =
-        IBooster(0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10);
+        IBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
 
     IVault public constant GRAVIAURA =
         IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
