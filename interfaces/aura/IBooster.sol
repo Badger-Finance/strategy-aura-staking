@@ -44,6 +44,8 @@ interface IBooster {
 
     function FEE_DENOMINATOR() external view returns (uint256);
 
+    function REWARD_MULTIPLIER_DENOMINATOR() external view returns (uint256);
+
     function MaxFees() external view returns (uint256);
 
     function addPool(
@@ -82,6 +84,8 @@ interface IBooster {
         );
 
     function gaugeMap(address) external view returns (bool);
+
+    function getRewardMultipliers(address) external view returns (uint256);
 
     function isShutdown() external view returns (bool);
 

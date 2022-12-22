@@ -23,6 +23,8 @@ contract StrategyAuraStaking is BaseStrategy {
     uint256 public pid;
     IBaseRewardPool public baseRewardPool;
 
+    uint256 public constant REWARD_MULTIPLIER_DENOMINATOR = 10000;
+
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
 
@@ -282,7 +284,7 @@ contract StrategyAuraStaking is BaseStrategy {
         rewards[0] = TokenAmount(address(BAL), balEarned);
         rewards[1] = TokenAmount(
             address(AURA),
-            getMintableAuraRewards(balEarned)
+            getMintableAuraRewards(_getModifiedRewardsFromMultiplier(balEarned))
         );
     }
 
@@ -311,5 +313,18 @@ contract StrategyAuraStaking is BaseStrategy {
                 amount = amtTillMax;
             }
         }
+    }
+
+    /// @notice Returns the amount of BAL rewards to be considered for AURA minting based on the resepctive
+    ///         rewards pool's multiplier.
+    /// @dev ref: https://etherscan.io/address/0xA57b8d98dAE62B26Ec3bcC4a365338157060B234#code#F32#L724
+    function _getModifiedRewardsFromMultiplier(uint256 _balAmount)
+        internal
+        view
+        returns (uint256 modifiedBalAmount)
+    {
+        modifiedBalAmount = _balAmount
+            .mul(BOOSTER.getRewardMultipliers(address(baseRewardPool)))
+            .div(REWARD_MULTIPLIER_DENOMINATOR);
     }
 }
