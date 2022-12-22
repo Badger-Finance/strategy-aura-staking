@@ -1,0 +1,5 @@
+[profile.default]
+remappings = [
+    "@openzeppelin-contracts-upgradeable=/root/.brownie/packages/OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0/contracts/",
+    "@badger-finance=/root/.brownie/packages/Badger-Finance/badger-vaults-1.5@1.5.2.a/contracts/",
+]

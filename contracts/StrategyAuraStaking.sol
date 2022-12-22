@@ -26,6 +26,8 @@ contract StrategyAuraStaking is BaseStrategy {
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
 
+    uint256 public constant REWARD_MULTIPLIER_DENOMINATOR = 10000;
+
     IBooster public constant BOOSTER =
         IBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
 
@@ -293,6 +295,9 @@ contract StrategyAuraStaking is BaseStrategy {
         view
         returns (uint256 amount)
     {
+        uint256 mintAmount = _balAmount
+            .mul(BOOSTER.getRewardMultipliers(address(baseRewardPool)))
+            .div(BOOSTER.REWARD_MULTIPLIER_DENOMINATOR());
         // NOTE: Only correct if AURA.minterMinted() == 0
         //       minterMinted is a private var in the contract, so we can't access it directly
         uint256 emissionsMinted = AURA.totalSupply() - AURA.INIT_MINT_AMOUNT();
@@ -302,7 +307,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
         if (cliff < totalCliffs) {
             uint256 reduction = totalCliffs.sub(cliff).mul(5).div(2).add(700);
-            amount = _balAmount.mul(reduction).div(totalCliffs);
+            amount = mintAmount.mul(reduction).div(totalCliffs);
 
             uint256 amtTillMax = AURA.EMISSIONS_MAX_SUPPLY().sub(
                 emissionsMinted
