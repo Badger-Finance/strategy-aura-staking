@@ -26,8 +26,6 @@ contract StrategyAuraStaking is BaseStrategy {
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
 
-    uint256 public constant REWARD_MULTIPLIER_DENOMINATOR = 10000;
-
     IBooster public constant BOOSTER =
         IBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
 
