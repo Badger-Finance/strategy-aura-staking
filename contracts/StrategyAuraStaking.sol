@@ -23,6 +23,8 @@ contract StrategyAuraStaking is BaseStrategy {
     uint256 public pid;
     IBaseRewardPool public baseRewardPool;
 
+    uint256 public constant REWARD_MULTIPLIER_DENOMINATOR = 10000;
+
     bool public claimRewardsOnWithdrawAll;
     uint256 public balEthBptToAuraBalMinOutBps;
 
@@ -293,9 +295,9 @@ contract StrategyAuraStaking is BaseStrategy {
         view
         returns (uint256 amount)
     {
-        uint256 mintAmount = _balAmount
-            .mul(BOOSTER.getRewardMultipliers(address(baseRewardPool)))
-            .div(BOOSTER.REWARD_MULTIPLIER_DENOMINATOR());
+        uint256 modifiedBalAmount = _getModifiedRewardsFromMultiplier(
+            _balAmount
+        );
         // NOTE: Only correct if AURA.minterMinted() == 0
         //       minterMinted is a private var in the contract, so we can't access it directly
         uint256 emissionsMinted = AURA.totalSupply() - AURA.INIT_MINT_AMOUNT();
@@ -305,7 +307,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
         if (cliff < totalCliffs) {
             uint256 reduction = totalCliffs.sub(cliff).mul(5).div(2).add(700);
-            amount = mintAmount.mul(reduction).div(totalCliffs);
+            amount = modifiedBalAmount.mul(reduction).div(totalCliffs);
 
             uint256 amtTillMax = AURA.EMISSIONS_MAX_SUPPLY().sub(
                 emissionsMinted
@@ -314,5 +316,18 @@ contract StrategyAuraStaking is BaseStrategy {
                 amount = amtTillMax;
             }
         }
+    }
+
+    /// @notice Returns the amount of BAL rewards to be considered for AURA minting based on the resepctive
+    ///         rewards pool's multiplier.
+    /// @dev ref: https://etherscan.io/address/0xA57b8d98dAE62B26Ec3bcC4a365338157060B234#code#F32#L724
+    function _getModifiedRewardsFromMultiplier(uint256 _balAmount)
+        internal
+        view
+        returns (uint256 modifiedBalAmount)
+    {
+        modifiedBalAmount = _balAmount
+            .mul(BOOSTER.getRewardMultipliers(address(baseRewardPool)))
+            .div(REWARD_MULTIPLIER_DENOMINATOR);
     }
 }
