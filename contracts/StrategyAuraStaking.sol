@@ -284,7 +284,7 @@ contract StrategyAuraStaking is BaseStrategy {
         rewards[0] = TokenAmount(address(BAL), balEarned);
         rewards[1] = TokenAmount(
             address(AURA),
-            getMintableAuraRewards(balEarned)
+            getMintableAuraRewards(_getModifiedRewardsFromMultiplier(balEarned))
         );
     }
 
@@ -295,9 +295,6 @@ contract StrategyAuraStaking is BaseStrategy {
         view
         returns (uint256 amount)
     {
-        uint256 modifiedBalAmount = _getModifiedRewardsFromMultiplier(
-            _balAmount
-        );
         // NOTE: Only correct if AURA.minterMinted() == 0
         //       minterMinted is a private var in the contract, so we can't access it directly
         uint256 emissionsMinted = AURA.totalSupply() - AURA.INIT_MINT_AMOUNT();
@@ -307,7 +304,7 @@ contract StrategyAuraStaking is BaseStrategy {
 
         if (cliff < totalCliffs) {
             uint256 reduction = totalCliffs.sub(cliff).mul(5).div(2).add(700);
-            amount = modifiedBalAmount.mul(reduction).div(totalCliffs);
+            amount = _balAmount.mul(reduction).div(totalCliffs);
 
             uint256 amtTillMax = AURA.EMISSIONS_MAX_SUPPLY().sub(
                 emissionsMinted
